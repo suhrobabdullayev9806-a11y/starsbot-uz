@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!-- Auto Stars - Admin WebApp -->
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auto Stars Admin</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #1a1a2e; --card: #f3f4f6;
+      --accent: #2ecc71; --danger: #e74c3c; --muted: #888;
+    }
+    body {
+      margin: 0; font-family: system-ui, sans-serif;
+      background: var(--bg); color: var(--fg); padding: 16px;
+    }
+    .card { background: var(--card); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+    h1 { font-size: 20px; margin: 4px 0 12px; }
+    h2 { font-size: 16px; margin: 0 0 8px; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat { background: var(--card); border-radius: 12px; padding: 10px; text-align: center; }
+    .stat b { display: block; font-size: 20px; }
+    .stat span { font-size: 12px; color: var(--muted); }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    button {
+      border: 0; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+      font-weight: 600; color: #fff;
+    }
+    .btn-ok { background: var(--accent); }
+    .btn-no { background: var(--danger); }
+    .muted { color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>🛠 Auto Stars — Admin</h1>
+  <div id="err" style="color:var(--danger)"></div>
+
+  <h2>📊 Statistika</h2>
+  <div class="grid" id="stats">
+    <div class="stat"><b>0</b><span>Kunlik ⭐</span></div>
+    <div class="stat"><b>0</b><span>Haftalik ⭐</span></div>
+    <div class="stat"><b>0</b><span>Oylik ⭐</span></div>
+    <div class="stat"><b>0</b><span>Foydalanuvchilar</span></div>
+  </div>
+
+  <div class="card" id="prices">
+    <b>💎 Narxlar</b>
+    <div id="pricesBody" class="muted">Yuklanmoqda...</div>
+  </div>
+
+  <h2>📦 Buyurtmalar</h2>
+  <div id="orders"></div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+    const initData = tg.initData;
+
+    function fmt(n) { return Number(n).toLocaleString('ru-RU'); }
+
+    async function api(path, opts = {}) {
+      opts.headers = Object.assign({
+        'X-Telegram-Init-Data': initData,
+        'Content-Type': 'application/json'
+      }, opts.headers || {});
+      const res = await fetch(path, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(JSON.stringify(data));
+      return data;
+    }
+
+    async function loadStats() {
+      const s = await api('/api/stats');
+      document.querySelectorAll('#stats .stat b')[0].textContent = fmt(s.daily.sold_stars);
+      document.querySelectorAll('#stats .stat b')[1].textContent = fmt(s.weekly.sold_stars);
+      document.querySelectorAll('#stats .stat b')[2].textContent = fmt(s.monthly.sold_stars);
+      document.querySelectorAll('#stats .stat b')[3].textContent = fmt(s.users);
+    }
+
+    const ST = { pending: '⏳', processing: '⚙️', approved: '✅', rejected: '❌', done: '✅', canceled: '🚫' };
+
+    async function loadPrices() {
+      const s = await api('/api/settings');
+      let html = '';
+      if (s.star_price > 0) {
+        html += `💎 1 ⭐ = <b>${fmt(s.star_price)} so'm</b> (min ${fmt(s.min_stars)} ⭐)<br>`;
+        for (const k of Object.keys(s.prices || {}).sort((a,b)=>a-b)) {
+          html += `— ${fmt(k)}⭐ = ${fmt(s.prices[k])} so'm<br>`;
+        }
+      } else {
+        html += 'Eski narxlar jadvali:<br>';
+        for (const k of Object.keys(s.prices || {}).sort((a,b)=>a-b)) {
+          html += `— ${fmt(k)}⭐ = ${fmt(s.prices[k])} so'm<br>`;
+        }
+      }
+      html += `<span class="muted">API: ${s.api_enabled ? '✅ yoqilgan' : '❌ o\'chirilgan'}</span>`;
+      document.getElementById('pricesBody').innerHTML = html;
+    }
+
+    async function loadOrders() {
+      const d = await api('/api/orders');
+      const box = document.getElementById('orders');
+      box.innerHTML = '';
+      for (const o of d.orders) {
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.innerHTML =
+          `<div class="row"><b>#${o.id}</b> <span>${ST[o.status] || o.status}</span></div>` +
+          `<div>⭐ ${fmt(o.stars_amount)} · ${o.type} · ${o.payment_method}</div>` +
+          `<div class="muted">${o.note || ''}</div>`;
+        if (o.status === 'pending') {
+          const ok = document.createElement('button');
+          ok.className = 'btn-ok'; ok.textContent = '✅';
+          ok.onclick = async () => { await api(`/api/orders/${o.id}/approve`, {method: 'POST'}); loadOrders(); loadStats(); };
+          const no = document.createElement('button');
+          no.className = 'btn-no'; no.textContent = '❌';
+          no.onclick = async () => { await api(`/api/orders/${o.id}/reject`, {method: 'POST'}); loadOrders(); loadStats(); };
+          const row = document.createElement('div');
+          row.className = 'row'; row.style.marginTop = '8px';
+          row.appendChild(ok); row.appendChild(no);
+          el.appendChild(row);
+        }
+        box.appendChild(el);
+      }
+    }
+
+    async function boot() {
+      try {
+        await loadStats();
+        await loadOrders();
+        await loadPrices();
+      } catch (e) {
+        document.getElementById('err').textContent = '⛔️ Auth xatosi / Ruxsat yo\'q';
+      }
+    }
+    boot();
+  </script>
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Admin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#0d1016;--p:#161b24;--r:#1f2632;--h:rgba(255,255,255,.07);--t:#eef1f6;--m:#8b94a5;--a:#5aa9ff;--g:#3ddc97;--y:#f4c35f;--e:#ff6b6b;--sb:env(safe-area-inset-bottom,0px)}
+body.light{--bg:#f1f3f8;--p:#fff;--r:#e9edf5;--h:rgba(15,23,42,.09);--t:#111827;--m:#5d6778;--a:#1d7fe0;--y:#b9770e}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--t);font:15px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:calc(84px + var(--sb))}
+button,input,select{font:inherit;color:inherit;border:0;background:none}
+button{cursor:pointer}
+.app{max-width:640px;margin:0 auto;padding:14px}
+h1{font-size:22px;font-weight:800;letter-spacing:-.02em}
+h2{font-size:13px;color:var(--m);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin:18px 2px 8px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.pill{padding:5px 11px;border-radius:99px;background:var(--r);font-size:12px;color:var(--m)}
+.pill.on{color:var(--g)}.pill.off{color:var(--e)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.box{background:var(--p);border:1px solid var(--h);border-radius:16px;padding:14px}
+.big{font-size:24px;font-weight:800;margin-top:2px}
+.lbl{font-size:12px;color:var(--m)}
+.card{background:var(--p);border:1px solid var(--h);border-radius:16px;padding:12px;margin-bottom:10px}
+.row{display:flex;align-items:center;gap:10px}.sp{justify-content:space-between}.col{flex:1;min-width:0}
+.nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:12px;color:var(--m);margin-top:2px;word-break:break-word}
+.tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;background:var(--r)}
+.s-done,.s-approved,.s-active{color:var(--g)}.s-pending,.s-processing,.s-reserved{color:var(--y)}.s-rejected,.s-failed{color:var(--e)}.s-sold{color:var(--a)}
+.btn{padding:10px 14px;border-radius:12px;background:var(--a);color:#fff;font-weight:700}
+.btn.g{background:var(--g);color:#06281a}.btn.e{background:var(--e);color:#fff}.btn.n{background:var(--r);color:var(--t)}
+.btn.s{padding:7px 11px;font-size:13px;border-radius:10px}
+.btn:disabled{opacity:.5}
+.acts{display:flex;gap:8px;margin-top:10px}.acts .btn{flex:1}
+input,select{width:100%;padding:12px 13px;border-radius:12px;background:var(--r);border:1px solid var(--h);margin-bottom:8px}
+input:focus{outline:2px solid var(--a)}
+.img{width:56px;height:56px;border-radius:14px;object-fit:cover;background:var(--r);flex:none}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px}.chips::-webkit-scrollbar{display:none}
+.chip{padding:7px 13px;border-radius:99px;background:var(--r);white-space:nowrap;font-size:13px;font-weight:600;color:var(--m)}
+.chip.on{background:var(--a);color:#fff}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--p);border-top:1px solid var(--h);padding:6px 6px calc(6px + var(--sb));z-index:10}
+nav button{flex:1;min-width:0;padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--m);position:relative}
+nav button i{font-style:normal;font-size:20px}
+nav button.on{color:var(--a)}
+nav b{position:absolute;top:0;right:22%;background:var(--e);color:#fff;font-size:10px;min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.empty{text-align:center;color:var(--m);padding:30px 0}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-90px);background:var(--p);border:1px solid var(--h);padding:10px 16px;border-radius:12px;z-index:30;transition:.25s;max-width:90%;font-size:14px}
+.toast.show{transform:translateX(-50%)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.md{background:var(--p);width:100%;max-width:640px;border-radius:20px 20px 0 0;padding:16px 16px calc(16px + var(--sb));max-height:88vh;overflow:auto}
+.md h3{margin-bottom:10px}.md label{font-size:12px;color:var(--m);display:block;margin:2px 2px 4px}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px}
+button.card{display:block;color:inherit}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><h1 id="title">Admin</h1><span class="pill" id="state">…</span></div>
+  <div id="view"></div>
+</div>
+<nav id="nav"></nav>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+"use strict";
+var tg=window.Telegram&&Telegram.WebApp;
+if(tg){tg.ready();tg.expand();try{tg.setHeaderColor("secondary_bg_color")}catch(e){}
+ if(tg.colorScheme==="light")document.body.classList.add("light")}
+var $=function(s){return document.querySelector(s)};
+var E=function(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+var F=function(n){return Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:0})};
+var NF=[],tab="home",ofilter="pending",pending=0,busy=false;
+var TABS=[["home","📊","Bosh"],["orders","📦","Buyurtma"],["nft","🖼","NFT"],["uc","🎮","UC"],["users","👥","Users"],["smm","🚀","SMM"],["set","⚙️","Sozlama"]];
+var TYPES={buy:"⭐ Stars",post_stars:"📝 Post",gift:"🎁 Gift",topup:"💳 Hisob",nft:"🖼 NFT",uc:"🎮 UC"};
+var ERR={bad_url:"Havola noto'g'ri (t.me/nft/Nom-123)",bad_price:"Narx noto'g'ri",duplicate:"Bu NFT allaqachon qo'shilgan",not_active:"Faqat sotuvdagi NFT o'chiriladi",insufficient:"Hisobda yetarli mablag' yo'q",bad_request:"Noto'g'ri so'rov",order_not_found:"Buyurtma topilmadi",already_processed:"Allaqachon ko'rib chiqilgan",server:"Serverda xatolik",network:"Internet bilan aloqa yo'q",auth:"Ruxsat yo'q: mini-appni botdagi tugma orqali oching",not_found:"Topilmadi",bad_uc:"UC miqdori noto'g'ri",bad_lookup_url:"Manzil http(s):// bilan boshlansin va {id} bo'lsin",bad_pubg_id:"PUBG ID noto'g'ri"};
+
+function toast(m){var t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(function(){t.classList.remove("show")},2800);if(tg&&tg.HapticFeedback)try{tg.HapticFeedback.impactOccurred("light")}catch(e){}}
+function api(p,o){o=o||{};o.headers={"X-Telegram-Init-Data":tg?tg.initData:"","Content-Type":"application/json"};o.cache="no-store";
+ return fetch(p,o).then(function(r){return r.json().catch(function(){return{ok:false,error:"server"}}).then(function(d){if(r.status===401)d.error="auth";return d})}).catch(function(){return{ok:false,error:"network"}})}
+function post(p,b){return api(p,{method:"POST",body:JSON.stringify(b||{})})}
+function errText(d){return (ERR[d.reason]||ERR[d.error]||d.reason||d.error||"Xato")+(d.detail?" ("+d.detail+")":"")}
+function modal(title,fields,ok,onSave){var o=document.createElement("div");o.className="ov";
+ var h='<div class="md"><h3>'+E(title)+"</h3>"+fields.map(function(f,i){return"<label>"+E(f.l)+'</label><input data-i="'+i+'" value="'+E(f.v)+'" inputmode="'+(f.m||"text")+'" autocapitalize="off">'}).join("")+'<div class="acts"><button class="btn n" data-x>Bekor</button><button class="btn g" data-s>'+E(ok||"Saqlash")+"</button></div></div>";
+ o.innerHTML=h;document.body.appendChild(o);var close=function(){o.remove()};
+ o.onclick=function(e){if(e.target===o)close()};o.querySelector("[data-x]").onclick=close;
+ o.querySelector("[data-s]").onclick=function(){var vals={};[].forEach.call(o.querySelectorAll("input"),function(i){vals[fields[i.dataset.i].k]=i.value.trim()});var b=this;b.disabled=true;Promise.resolve(onSave(vals)).then(function(keep){b.disabled=false;if(!keep)close()})}}
+function ask(q,cb){if(tg&&tg.showConfirm)tg.showConfirm(q,function(ok){if(ok)cb()});else if(confirm(q))cb()}
+
+function nav(){$("#nav").innerHTML=TABS.map(function(t){return'<button data-t="'+t[0]+'" class="'+(t[0]===tab?"on":"")+'"><i>'+t[1]+"</i>"+t[2]+(t[0]==="orders"&&pending?"<b>"+pending+"</b>":"")+"</button>"}).join("");
+ [].forEach.call(document.querySelectorAll("nav button"),function(b){b.onclick=function(){tab=b.dataset.t;render()}})}
+function loading(){$("#view").innerHTML='<div class="empty">Yuklanmoqda…</div>'}
+function authFail(){$("#view").innerHTML='<div class="empty">🔒 Ruxsat yo\'q.<br>Bu sahifa faqat adminlar uchun va Telegram ichida ochiladi.</div>'}
+
+function render(){nav();$("#title").textContent=TABS.filter(function(t){return t[0]===tab})[0][2];loading();({home:home,orders:orders,nft:nfts,uc:uc,users:users,smm:smm,set:settings})[tab]()}
+
+function home(){api("/api/adm/overview").then(function(d){
+ if(d.error==="auth")return authFail();if(!d.ok)return $("#view").innerHTML='<div class="empty">Yuklab bo\'lmadi</div>';
+ pending=d.pending;nav();var st=$("#state");st.textContent=d.bot_active?"● Bot ON":"● Bot OFF";st.className="pill "+(d.bot_active?"on":"off");
+ var n=d.nft||{};
+ $("#view").innerHTML='<div class="grid">'+
+ box("Kunlik ⭐",F(d.daily.sold_stars),F(d.daily.sold_sum)+" so'm")+box("Haftalik ⭐",F(d.weekly.sold_stars),F(d.weekly.sold_sum)+" so'm")+
+ box("Oylik ⭐",F(d.monthly.sold_stars),F(d.monthly.sold_sum)+" so'm")+box("Foydalanuvchi",F(d.users),"")+
+ box("Kutilayotgan",F(d.pending),"buyurtma")+box("NFT sotuvda",F(n.active||0),"band: "+F(n.reserved||0)+" · sotilgan: "+F(n.sold||0))+
+ box("Post stars",F(d.post_done.s),F(d.post_done.c)+" ta buyurtma")+box("NFT daromad",F(d.nft_sold.s),"so'm · "+F(d.nft_sold.c)+" ta")+box("UC daromad",F((d.uc_done||{}).s),"so'm · "+F((d.uc_done||{}).c)+" ta")+
+ '</div><h2>Akkauntlar</h2><div class="card row sp"><div><div class="nm">Ulangan akkauntlar</div><div class="sub">Faol: '+d.accounts.active+" / "+d.accounts.total+'</div></div><button class="btn n s" id="accs">Tekshirish</button></div><div id="accout"></div>'
+ $("#accs").onclick=accounts})}
+function box(l,v,s){return'<div class="box"><div class="lbl">'+l+'</div><div class="big">'+v+'</div><div class="lbl">'+s+"</div></div>"}
+function accounts(){$("#accout").innerHTML='<div class="empty">…</div>';api("/api/adm/accounts").then(function(d){
+ if(!d.ok||!d.accounts.length){$("#accout").innerHTML='<div class="empty">Akkaunt ulanmagan</div>';return}
+ $("#accout").innerHTML=d.accounts.map(function(a){return'<div class="card row sp"><div class="col"><div class="nm">#'+a.id+" "+E(a.title)+'</div><div class="sub" id="at'+a.id+'">'+E(a.status)+'</div></div><button class="btn s n" data-a="'+a.id+'">Test</button></div>'}).join("");
+ [].forEach.call(document.querySelectorAll("[data-a]"),function(b){b.onclick=function(){var el=$("#at"+b.dataset.a);el.textContent="Tekshirilmoqda…";post("/api/adm/accounts/"+b.dataset.a+"/test").then(function(r){el.textContent=(r.ok?"✅ ":"❌ ")+(r.message||"")})}})})}
+
+function orders(){var fs=[["pending","Kutilmoqda"],["","Hammasi"],["done","Bajarilgan"],["failed","Xato"],["rejected","Rad"]];
+ api("/api/adm/orders?status="+ofilter).then(function(d){
+ if(d.error==="auth")return authFail();var rows=d.orders||[];
+ var h='<div class="chips">'+fs.map(function(f){return'<button class="chip '+(f[0]===ofilter?"on":"")+'" data-f="'+f[0]+'">'+f[1]+"</button>"}).join("")+"</div>";
+ if(!rows.length)h+='<div class="empty">Buyurtma yo\'q</div>';
+ h+=rows.map(function(o){var wait=o.status==="pending"||o.status==="processing";
+  var money=o.price_amount?F(o.price_amount)+" so'm":"",stars=o.stars_amount?F(o.stars_amount)+" ⭐":"";
+  return'<div class="card"><div class="row sp"><div class="nm">#'+o.id+" "+(TYPES[o.type]||E(o.type))+'</div><span class="tag s-'+E(o.status)+'">'+E(o.status)+"</span></div>"+
+  '<div class="sub">👤 <code>'+o.user_id+"</code> · "+[stars,money].filter(Boolean).join(" · ")+"</div>"+(o.note?'<div class="sub">'+E(o.note)+"</div>":"")+
+  '<div class="sub">'+E((o.created_at||"").replace("T"," ").slice(0,16))+"</div>"+
+  (wait?'<div class="acts"><button class="btn g" data-ok="'+o.id+'">✅ Tasdiqlash</button><button class="btn e" data-no="'+o.id+'">❌ Rad</button></div>':"")+"</div>"}).join("");
+ $("#view").innerHTML=h;
+ [].forEach.call(document.querySelectorAll("[data-f]"),function(b){b.onclick=function(){ofilter=b.dataset.f;render()}});
+ [].forEach.call(document.querySelectorAll("[data-ok]"),function(b){b.onclick=function(){decide(b.dataset.ok,"approve",b)}});
+ [].forEach.call(document.querySelectorAll("[data-no]"),function(b){b.onclick=function(){ask("Buyurtma #"+b.dataset.no+" rad etilsinmi?",function(){decide(b.dataset.no,"reject",b)})}})})}
+function decide(id,act,btn){if(busy)return;busy=true;btn.disabled=true;toast("Bajarilmoqda…");
+ post("/api/adm/orders/"+id+"/"+act).then(function(r){busy=false;toast(r.ok?"✅ Tayyor":"❌ "+errText(r));render()})}
+
+function nfts(){api("/api/adm/nfts").then(function(d){
+ if(d.error==="auth")return authFail();var rows=d.items||[];NF=rows;
+ var h='<div class="card"><div class="lbl" style="margin-bottom:8px">Yangi NFT qo\'shish</div><input id="nu" placeholder="https://t.me/nft/PlushPepe-1234" inputmode="url" autocapitalize="off"><input id="np" placeholder="Narx (so\'m)" inputmode="numeric"><div id="pv"></div><div class="acts"><button class="btn n" id="pvb">👁 Ko\'rish</button><button class="btn g" id="nadd">➕ Qo\'shish</button></div></div>';
+ h+="<h2>Katalog ("+rows.length+")</h2>";if(!rows.length)h+='<div class="empty">NFT yo\'q</div>';
+ h+=rows.map(function(n){var tr=[n.model,n.backdrop,n.symbol].filter(Boolean).join(" · ");
+  return'<div class="card"><div class="row"><img class="img" loading="lazy" src="'+E(n.image)+'" alt="" onerror="this.style.visibility=\'hidden\'"><div class="col"><div class="nm">'+E(n.name)+" #"+n.number+'</div><div class="sub">'+E(tr)+'</div><div class="sub"><b style="color:var(--y)">'+F(n.price)+" so'm</b> · <span class=\"s-"+E(n.status)+'">'+E(n.status)+"</span></div></div></div>"+
+  '<div class="acts"><button class="btn n s" data-ed="'+n.id+'">✏️ Tahrirlash</button>'+(n.status==="active"?'<button class="btn e s" data-nd="'+n.id+'">🗑 O\'chirish</button>':"")+"</div></div>"}).join("");
+ $("#view").innerHTML=h;
+ $("#pvb").onclick=function(){var u=$("#nu").value.trim();if(!u)return;$("#pv").innerHTML='<div class="sub">Yuklanmoqda…</div>';
+  post("/api/adm/nfts/preview",{url:u}).then(function(r){if(!r.ok){$("#pv").innerHTML="";return toast("❌ "+errText(r))}var i=r.info;
+   $("#pv").innerHTML='<div class="row" style="margin-bottom:8px"><img class="img" src="'+E(i.image)+'" alt="" onerror="this.style.visibility=\'hidden\'"><div class="col"><div class="nm">'+E(i.name)+" #"+i.number+'</div><div class="sub">'+E([i.model,i.backdrop,i.symbol].filter(Boolean).join(" · ")||"Xususiyatlar topilmadi")+"</div>"+(r.duplicate?'<div class="sub s-failed">Allaqachon qo\'shilgan #'+r.duplicate+"</div>":"")+"</div></div>"})};
+ $("#nadd").onclick=function(){var b=this;b.disabled=true;post("/api/adm/nfts",{url:$("#nu").value,price:$("#np").value}).then(function(r){b.disabled=false;if(r.ok){toast("✅ Qo'shildi");render()}else toast("❌ "+errText(r))})};
+ [].forEach.call(document.querySelectorAll("[data-ed]"),function(b){b.onclick=function(){var n=NF.filter(function(x){return x.id==b.dataset.ed})[0];if(!n)return;
+  modal("NFT #"+n.id+" tahriri",[{k:"price",l:"Narx (so'm)",v:n.price,m:"numeric"},{k:"name",l:"Nomi",v:n.name},{k:"number",l:"Raqami",v:n.number,m:"numeric"},{k:"model",l:"Model",v:n.model},{k:"backdrop",l:"Backdrop",v:n.backdrop},{k:"symbol",l:"Symbol",v:n.symbol},{k:"image",l:"Rasm (https://...)",v:n.image,m:"url"}],"Saqlash",
+   function(v){return post("/api/adm/nfts/"+n.id+"/update",v).then(function(r){if(r.ok){toast("✅ Saqlandi");render();return false}toast("❌ "+errText(r));return true})})}});
+ [].forEach.call(document.querySelectorAll("[data-nd]"),function(b){b.onclick=function(){ask("NFT o'chirilsinmi?",function(){post("/api/adm/nfts/"+b.dataset.nd+"/delete").then(function(r){toast(r.ok?"🗑 O'chirildi":"❌ "+errText(r));if(r.ok)render()})})}})})}
+
+var uq="";
+function users(){$("#view").innerHTML='<input id="uq" placeholder="ID yoki @username qidirish" value="'+E(uq)+'"><div id="ul"><div class="empty">…</div></div>';
+ var timer;$("#uq").oninput=function(){uq=this.value;clearTimeout(timer);timer=setTimeout(list,350)};list();
+ function list(){api("/api/adm/users?q="+encodeURIComponent(uq)).then(function(d){if(d.error==="auth")return authFail();var r=d.users||[];
+  $("#ul").innerHTML=r.length?r.map(function(u){return'<div class="card"><div class="row sp"><div class="col"><div class="nm">'+E(u.first_name||"—")+(u.username?" @"+E(u.username):"")+'</div><div class="sub">ID <code>'+u.id+"</code></div></div></div>"+
+   '<div class="sub" style="margin-top:6px">💰 <b>'+F(u.balance_sum)+" so'm</b> · ⭐ <b>"+F(u.balance_stars)+'</b></div><div class="acts"><button class="btn g s" data-u="'+u.id+'" data-d="1">＋ Qo\'shish</button><button class="btn e s" data-u="'+u.id+'" data-d="0">－ Ayirish</button></div></div>'}).join(""):'<div class="empty">Topilmadi</div>';
+  [].forEach.call(document.querySelectorAll("[data-u]"),function(b){b.onclick=function(){var add=b.dataset.d==="1";
+   modal(add?"Hisobga qo'shish":"Hisobdan ayirish",[{k:"amount",l:"Miqdor (so'm)",v:"",m:"numeric"}],add?"Qo'shish":"Ayirish",function(v){
+    return post("/api/adm/users/"+b.dataset.u+"/balance",{amount:v.amount,add:add,kind:"sum"}).then(function(r){if(r.ok){toast("✅ Yangi hisob: "+F(r.balance)+" so'm");list();return false}toast("❌ "+errText(r));return true})})}})})}}
+
+function settings(){api("/api/adm/settings").then(function(d){if(d.error==="auth")return authFail();
+ $("#view").innerHTML='<div class="card"><div class="sw"><div><div class="nm">Bot holati</div><div class="sub">O\'chiq bo\'lsa foydalanuvchilar kira olmaydi</div></div><button class="btn '+(d.active?"g":"e")+' s" id="tg">'+(d.active?"ON":"OFF")+"</button></div></div>"+
+ '<h2>Narxlar (1 ⭐ = so\'m)</h2><div class="card"><div class="lbl">Stars sotib olish</div><input id="s1" inputmode="decimal" value="'+d.star_price+'"><div class="lbl">Postga stars</div><input id="s2" inputmode="decimal" value="'+d.post_price+'"><div class="lbl">Postga minimal stars</div><input id="s3" inputmode="numeric" value="'+d.post_min_stars+'"><div class="lbl">Foiz (%)</div><input id="s4" inputmode="decimal" value="'+d.percent+'"><div class="lbl">To\'lov kartasi</div><input id="s5" value="'+E(d.card)+'"><button class="btn" id="sv" style="width:100%">💾 Saqlash</button></div>';
+ $("#tg").onclick=function(){post("/api/adm/settings",{active:!d.active}).then(function(){toast("✅ Bot holati o'zgardi");render()})};
+ $("#sv").onclick=function(){post("/api/adm/settings",{star_price:$("#s1").value,post_price:$("#s2").value,post_min_stars:$("#s3").value,percent:$("#s4").value,card:$("#s5").value}).then(function(r){toast(r.ok?"✅ Saqlandi":"❌ Xato")})}})}
+
+/* ===================== SMM NAKRUTKA ===================== */
+var SM={sub:"set",q:"",plat:"",off:0,ofil:"active",cats:null,sel:{},cq:""};
+var SMERR={bad_url:"URL http:// yoki https:// bilan boshlansin",bad_number:"Raqam noto'g'ri",provider:"Provayder xatosi",nothing:"Hech narsa o'zgarmadi",already_processed:"Allaqachon yakunlangan",provider_not_configured:"Avval provayder URL va kalitini kiriting"};
+function smErr(d){return (SMERR[d.error]||ERR[d.error]||d.error||"Xato")+(d.detail?": "+d.detail:"")}
+function smm(){
+ var subs=[["set","Sozlama"],["svc","Xizmatlar"],["ord","Buyurtmalar"]];
+ var h='<div class="chips">'+subs.map(function(s){return'<button class="chip '+(SM.sub===s[0]||(SM.sub==="imp"&&s[0]==="svc")?"on":"")+'" data-sm="'+s[0]+'">'+s[1]+"</button>"}).join("")+"</div><div id=\"smv\"><div class=\"empty\">Yuklanmoqda…</div></div>";
+ $("#view").innerHTML=h;
+ [].forEach.call(document.querySelectorAll("[data-sm]"),function(b){b.onclick=function(){SM.sub=b.dataset.sm;SM.off=0;smm()}});
+ ({set:smSet,svc:smSvc,imp:smImp,ord:smOrd})[SM.sub]()}
+function smSet(){api("/api/adm/smm/settings").then(function(d){
+ if(d.error==="auth")return authFail();if(!d.ok)return $("#smv").innerHTML='<div class="empty">Yuklab bo\'lmadi</div>';
+ var s=d.stats||{};
+ $("#smv").innerHTML='<div class="grid">'+box("Buyurtmalar",F(s.orders),"faol: "+F(s.active_orders))+box("Daromad",F(s.revenue),"so'm (qaytarilgani ayirilgan)")+box("Xizmatlar",F(s.services),"yoqilgan: "+F(s.services_active))+box("Provayder",d.url&&d.key_set?"✅":"❌",d.url?E(d.url.replace(/^https?:\/\//,"").slice(0,26)):"sozlanmagan")+"</div>"+
+ '<h2>Provayder API</h2><div class="card"><div class="lbl">API manzili (masalan https://panel.com/api/v2)</div><input id="sm1" value="'+E(d.url)+'" inputmode="url" autocapitalize="off"><div class="lbl">API kaliti '+(d.key_set?"(saqlangan: "+E(d.key_hint)+"; bo'sh qoldirsangiz o'zgarmaydi)":"")+'</div><input id="sm2" type="password" autocomplete="off" placeholder="'+(d.key_set?"yangi kalit (ixtiyoriy)":"kalitni kiriting")+'"><div id="smt" class="sub"></div><div class="acts"><button class="btn n" id="smtb">🔌 Ulanishni tekshirish</button></div></div>'+
+ '<h2>Narx siyosati</h2><div class="card"><div class="lbl">Kurs: provayder narxi × kurs = so\'m (provayder dollarda bo\'lsa, 1 USD necha so\'m)</div><input id="sm3" inputmode="decimal" value="'+d.rate+'"><div class="lbl">Ustama foiz (%)</div><input id="sm4" inputmode="decimal" value="'+d.markup+'"><div class="lbl">Minimal buyurtma narxi (so\'m)</div><input id="sm5" inputmode="decimal" value="'+d.min_price+'"><div class="sub">Kurs yoki foiz o\'zgarsa, qo\'lda narx qo\'yilmagan xizmatlar narxi avtomatik qayta hisoblanadi.</div></div>'+
+ '<h2>Yoqish / o\'chirish</h2><div class="card"><div class="sw"><div><div class="nm">SMM Nakrutka xizmati</div><div class="sub">O\'chiq bo\'lsa buyurtma qabul qilinmaydi</div></div><button class="btn s '+(d.enabled?"g":"e")+'" id="sme">'+(d.enabled?"ON":"OFF")+'</button></div><div class="sw" style="margin-top:14px"><div><div class="nm">Foydalanuvchilarga API berish</div><div class="sub">Mijozlar kalit olib, o\'z saytidan buyurtma beradi</div></div><button class="btn s '+(d.public_api?"g":"e")+'" id="smp">'+(d.public_api?"ON":"OFF")+'</button></div></div><button class="btn" id="smsv" style="width:100%">💾 Saqlash</button>';
+ var en=d.enabled,pa=d.public_api;
+ $("#sme").onclick=function(){en=!en;this.className="btn s "+(en?"g":"e");this.textContent=en?"ON":"OFF"};
+ $("#smp").onclick=function(){pa=!pa;this.className="btn s "+(pa?"g":"e");this.textContent=pa?"ON":"OFF"};
+ $("#smsv").onclick=function(){var b=this;b.disabled=true;post("/api/adm/smm/settings",{url:$("#sm1").value,key:$("#sm2").value,rate:$("#sm3").value,markup:$("#sm4").value,min_price:$("#sm5").value,enabled:en,public_api:pa}).then(function(r){b.disabled=false;toast(r.ok?"✅ Saqlandi"+(r.repriced?" · narx yangilandi: "+r.repriced+" ta":""):"❌ "+smErr(r));if(r.ok)smSet()})};
+ $("#smtb").onclick=function(){var o=$("#smt");o.textContent="Tekshirilmoqda…";post("/api/adm/smm/settings",{url:$("#sm1").value,key:$("#sm2").value}).then(function(){post("/api/adm/smm/test").then(function(r){o.textContent=r.ok?"✅ Ulandi. Provayder balansi: "+r.balance+" "+(r.currency||""):"❌ "+smErr(r)})})}})}
+function smSvc(){var P={telegram:"Telegram",instagram:"Instagram",tiktok:"TikTok",youtube:"YouTube",facebook:"Facebook",x:"X",other:"Boshqa"};
+ api("/api/adm/smm/services?q="+encodeURIComponent(SM.q)+"&platform="+SM.plat+"&limit=40&offset="+SM.off).then(function(d){
+ if(d.error==="auth")return authFail();var rows=d.items||[];
+ var h='<div class="acts" style="margin:0 0 10px"><button class="btn g s" id="smim">⬇️ Provayderdan import</button><button class="btn n s" id="smad">➕ Qo\'lda qo\'shish</button></div><input id="smq" placeholder="Qidirish: nom, kategoriya yoki ID" value="'+E(SM.q)+'">'+
+  '<div class="chips"><button class="chip '+(SM.plat===""?"on":"")+'" data-p="">Hammasi</button>'+Object.keys(P).map(function(k){return'<button class="chip '+(SM.plat===k?"on":"")+'" data-p="'+k+'">'+P[k]+"</button>"}).join("")+"</div>";
+ if(SM.plat)h+='<div class="acts" style="margin:0 0 10px"><button class="btn n s" id="smb1">Hammasini yoqish</button><button class="btn n s" id="smb2">Yashirish</button><button class="btn e s" id="smb3">Tozalash</button></div>';
+ h+='<div class="lbl" style="margin:4px 2px 8px">Jami: '+F(d.total)+"</div>"+(rows.length?"":'<div class="empty">Xizmat yo\'q. Import qiling yoki qo\'lda qo\'shing.</div>');
+ h+=rows.map(function(s){return'<div class="card"><div class="row sp"><div class="col"><div class="nm" style="white-space:normal">'+E(s.name)+'</div><div class="sub">'+E(P[s.platform]||s.platform)+" · "+E(s.category)+'</div><div class="sub"><b style="color:var(--y)">'+F(s.price)+" so'm</b>/1000"+(s.cost>0?" · provayder: "+s.cost:"")+(s.auto_price?" · avto":" · qo'lda")+'</div><div class="sub">'+F(s.min_qty)+" – "+F(s.max_qty)+" · ID: "+E(s.provider_id||"—")+'</div></div><span class="tag s-'+(s.active?"active":"rejected")+'">'+(s.active?"yoqiq":"o'chiq")+'</span></div><div class="acts"><button class="btn n s" data-e="'+s.id+'">✏️</button><button class="btn n s" data-t="'+s.id+'" data-a="'+s.active+'">'+(s.active?"Yashirish":"Yoqish")+'</button><button class="btn e s" data-x="'+s.id+'">🗑</button></div></div>'}).join("");
+ if(SM.off>0||SM.off+rows.length<d.total)h+='<div class="acts">'+(SM.off>0?'<button class="btn n" id="smpv">← Oldingi</button>':"")+(SM.off+rows.length<d.total?'<button class="btn n" id="smnx">Keyingi →</button>':"")+"</div>";
+ $("#smv").innerHTML=h;var tm;
+ $("#smq").oninput=function(){SM.q=this.value;SM.off=0;clearTimeout(tm);tm=setTimeout(smSvc,350)};
+ $("#smim").onclick=function(){SM.sub="imp";SM.cats=null;smm()};
+ $("#smad").onclick=function(){modal("Yangi xizmat",[{k:"name",l:"Nomi",v:""},{k:"category",l:"Kategoriya (masalan: Telegram obunachilar)",v:""},{k:"platform",l:"Platforma: telegram, instagram, tiktok, youtube, facebook, x, other (bo'sh = avto)",v:""},{k:"provider_id",l:"Provayderdagi xizmat ID si",v:"",m:"numeric"},{k:"price",l:"Narx: 1000 ta uchun so'm",v:"",m:"decimal"},{k:"min_qty",l:"Minimal miqdor",v:"10",m:"numeric"},{k:"max_qty",l:"Maksimal miqdor",v:"10000",m:"numeric"},{k:"description",l:"Izoh (ixtiyoriy)",v:""}],"Qo'shish",function(v){return post("/api/adm/smm/services",v).then(function(r){if(r.ok){toast("✅ Qo'shildi");smSvc();return false}toast("❌ "+smErr(r));return true})})};
+ [].forEach.call(document.querySelectorAll("[data-p]"),function(b){b.onclick=function(){SM.plat=b.dataset.p;SM.off=0;smSvc()}});
+ function bulk(a,q){ask(q,function(){post("/api/adm/smm/services/bulk",{action:a,platform:SM.plat}).then(function(r){toast(r.ok?"✅ "+r.count+" ta xizmat":"❌ "+smErr(r));smSvc()})})}
+ if(SM.plat){$("#smb1").onclick=function(){bulk("activate","Platformadagi hamma xizmat yoqilsinmi?")};$("#smb2").onclick=function(){bulk("deactivate","Platformadagi hamma xizmat yashirilsinmi?")};$("#smb3").onclick=function(){bulk("delete","Platformadagi BARCHA xizmatlar o'chirilsinmi? Buyurtmalar tarixi saqlanadi.")}}
+ if($("#smpv"))$("#smpv").onclick=function(){SM.off=Math.max(0,SM.off-40);smSvc()};if($("#smnx"))$("#smnx").onclick=function(){SM.off+=40;smSvc()};
+ [].forEach.call(document.querySelectorAll("[data-t]"),function(b){b.onclick=function(){post("/api/adm/smm/services/"+b.dataset.t+"/update",{active:b.dataset.a!=="1"}).then(function(){smSvc()})}});
+ [].forEach.call(document.querySelectorAll("[data-x]"),function(b){b.onclick=function(){ask("Xizmat o'chirilsinmi?",function(){post("/api/adm/smm/services/"+b.dataset.x+"/delete").then(function(r){toast(r.ok?"🗑 O'chirildi":"❌ "+smErr(r));smSvc()})})}});
+ [].forEach.call(document.querySelectorAll("[data-e]"),function(b){b.onclick=function(){var s=rows.filter(function(x){return x.id==b.dataset.e})[0];if(!s)return;
+  modal("Xizmat #"+s.id,[{k:"name",l:"Nomi",v:s.name},{k:"category",l:"Kategoriya",v:s.category},{k:"price",l:"Narx: 1000 ta uchun so'm (o'zgartirsangiz avto-narx o'chadi)",v:s.price,m:"decimal"},{k:"min_qty",l:"Minimal",v:s.min_qty,m:"numeric"},{k:"max_qty",l:"Maksimal",v:s.max_qty,m:"numeric"},{k:"provider_id",l:"Provayder ID",v:s.provider_id},{k:"platform",l:"Platforma",v:s.platform},{k:"description",l:"Izoh",v:s.description}],"Saqlash",
+   function(v){if(String(v.price)===String(s.price))delete v.price;return post("/api/adm/smm/services/"+s.id+"/update",v).then(function(r){if(r.ok){toast("✅ Saqlandi");smSvc();return false}toast("❌ "+smErr(r));return true})})}})})}
+function smImp(){
+ if(SM.cats===null){$("#smv").innerHTML='<div class="empty">Provayderdan kategoriyalar olinmoqda…</div>';
+  return api("/api/adm/smm/provider/categories?force=1").then(function(d){if(!d.ok){$("#smv").innerHTML='<div class="empty">❌ '+E(smErr(d))+'<br><br><button class="btn n" id="smbk">← Orqaga</button></div>';$("#smbk").onclick=function(){SM.sub="svc";smm()};return}SM.cats=d.categories;SM.sel={};smImp()})}
+ var q=SM.cq.toLowerCase(),list=SM.cats.filter(function(c){return !q||c.category.toLowerCase().indexOf(q)>=0}),n=Object.keys(SM.sel).length;
+ $("#smv").innerHTML='<div class="card"><div class="nm">Kategoriyalarni tanlang</div><div class="sub">Faqat yangi xizmatlar qo\'shiladi. Narx: provayder narxi × kurs × (1 + foiz). Import qilingan xizmatlarni keyin tahrirlash mumkin.</div></div><input id="smcq" placeholder="Kategoriya qidirish" value="'+E(SM.cq)+'"><div class="acts" style="margin:0 0 10px"><button class="btn n s" id="sma">Ko\'rinayotganlarni tanlash</button><button class="btn n s" id="smc">Tozalash</button></div>'+
+  list.slice(0,150).map(function(c){var on=SM.sel[c.category];return'<button class="card" style="width:100%;text-align:left;border:1px solid '+(on?"var(--g)":"var(--h)")+'" data-c="'+E(c.category)+'"><div class="row sp"><div class="col"><div class="nm" style="white-space:normal">'+(on?"✅ ":"")+E(c.category)+'</div><div class="sub">'+E(c.platform)+"</div></div><span class=\"tag\">"+c.count+" ta</span></div></button>"}).join("")+(list.length>150?'<div class="sub">Dastlabki 150 ta ko\'rsatildi, qidiruvdan foydalaning.</div>':"")+
+  '<div class="acts"><button class="btn n" id="smbk">← Orqaga</button><button class="btn g" id="smgo" '+(n?"":"disabled")+'>⬇️ Import ('+n+")</button></div>";
+ var tm;$("#smcq").oninput=function(){SM.cq=this.value;clearTimeout(tm);tm=setTimeout(smImp,300)};
+ $("#sma").onclick=function(){list.forEach(function(c){SM.sel[c.category]=1});smImp()};$("#smc").onclick=function(){SM.sel={};smImp()};
+ [].forEach.call(document.querySelectorAll("[data-c]"),function(b){b.onclick=function(){var k=b.dataset.c;if(SM.sel[k])delete SM.sel[k];else SM.sel[k]=1;smImp()}});
+ $("#smbk").onclick=function(){SM.sub="svc";smm()};
+ $("#smgo").onclick=function(){var b=this;b.disabled=true;toast("Import qilinmoqda…");post("/api/adm/smm/import",{categories:Object.keys(SM.sel)}).then(function(r){b.disabled=false;if(r.ok){toast("✅ Qo'shildi: "+r.added+", o'tkazildi: "+r.skipped);SM.sub="svc";SM.sel={};smm()}else toast("❌ "+smErr(r))})}}
+function smOrd(){var fs=[["active","Faol"],["","Hammasi"],["completed","Bajarilgan"],["partial","Qisman"],["canceled","Bekor"],["failed","Xato"]];
+ api("/api/adm/smm/orders?status="+SM.ofil).then(function(d){if(d.error==="auth")return authFail();var rows=d.orders||[];
+ var h='<div class="acts" style="margin:0 0 10px"><button class="btn n s" id="smsy">🔄 Provayderdan holatni yangilash</button></div><div class="chips">'+fs.map(function(f){return'<button class="chip '+(f[0]===SM.ofil?"on":"")+'" data-f="'+f[0]+'">'+f[1]+"</button>"}).join("")+"</div>";
+ if(!rows.length)h+='<div class="empty">Buyurtma yo\'q</div>';
+ h+=rows.map(function(o){var act=o.status==="pending"||o.status==="processing";
+  return'<div class="card"><div class="row sp"><div class="nm">#'+o.id+" "+E(o.service_name)+'</div><span class="tag s-'+(o.status==="completed"?"done":act?"pending":"rejected")+'">'+E(o.status)+"</span></div>"+
+  '<div class="sub" style="word-break:break-all">🔗 '+E(o.link)+'</div><div class="sub">👤 <code>'+o.user_id+"</code> · "+F(o.quantity)+" ta · "+F(o.price)+" so'm"+(o.refunded>0?" · qaytarilgan: "+F(o.refunded):"")+(o.source==="api"?" · API":"")+'</div><div class="sub">Provayder: '+E(o.provider_order||"—")+(o.remains?" · qolgan: "+F(o.remains):"")+(o.error?" · "+E(o.error):"")+'</div><div class="sub">'+E((o.created_at||"").replace("T"," ").slice(0,16))+"</div>"+
+  (act?'<div class="acts"><button class="btn e s" data-cx="'+o.id+'">❌ Bekor qilish va qaytarish</button></div>':"")+"</div>"}).join("");
+ $("#smv").innerHTML=h;
+ [].forEach.call(document.querySelectorAll("[data-f]"),function(b){b.onclick=function(){SM.ofil=b.dataset.f;smOrd()}});
+ $("#smsy").onclick=function(){toast("Yangilanmoqda…");post("/api/adm/smm/sync").then(function(r){toast(r.ok?"✅ O'zgargan: "+r.changed:"❌ "+smErr(r));smOrd()})};
+ [].forEach.call(document.querySelectorAll("[data-cx]"),function(b){b.onclick=function(){ask("Buyurtma #"+b.dataset.cx+" bekor qilinib, pul mijozga qaytarilsinmi?",function(){post("/api/adm/smm/orders/"+b.dataset.cx+"/cancel").then(function(r){toast(r.ok?"✅ Qaytarildi":"❌ "+smErr(r));smOrd()})})}})})}
+
+
+/* ===================== PUBG UC ===================== */
+var UC={sub:"stats",ofil:"pending",oq:"",pk:[]};
+function ucErr(d){return ERR[d.reason]||ERR[d.error]||d.error||"Xato"}
+function uc(){
+ var subs=[["stats","Statistika"],["ord","Buyurtmalar"],["pk","Paketlar"],["set","Sozlama"]];
+ $("#view").innerHTML='<div class="chips">'+subs.map(function(s){return'<button class="chip '+(UC.sub===s[0]?"on":"")+'" data-uc="'+s[0]+'">'+s[1]+"</button>"}).join("")+'</div><div id="ucv"><div class="empty">Yuklanmoqda…</div></div>';
+ [].forEach.call(document.querySelectorAll("[data-uc]"),function(b){b.onclick=function(){UC.sub=b.dataset.uc;uc()}});
+ ({stats:ucStats,ord:ucOrd,pk:ucPk,set:ucSet})[UC.sub]()}
+function ucStats(){api("/api/adm/uc/stats").then(function(d){
+ if(d.error==="auth")return authFail();if(!d.ok)return $("#ucv").innerHTML='<div class="empty">Yuklab bo\'lmadi</div>';
+ var p=d.periods,mx=Math.max.apply(null,d.daily.map(function(x){return x.revenue}).concat([1]));
+ var h='<div class="grid">'+box("Bugun",F(p.today.uc)+" UC",F(p.today.orders)+" ta · "+F(p.today.revenue)+" so'm")+box("Hafta",F(p.week.uc)+" UC",F(p.week.orders)+" ta · "+F(p.week.revenue)+" so'm")+
+  box("Oy",F(p.month.uc)+" UC",F(p.month.orders)+" ta · "+F(p.month.revenue)+" so'm")+box("Jami",F(p.all.uc)+" UC",F(p.all.orders)+" ta · "+F(p.all.revenue)+" so'm")+
+  box("Kutilmoqda",F(d.pending.c),F(d.pending.uc)+" UC · "+F(d.pending.s)+" so'm")+box("O'rtacha chek",F(d.avg_order),"so'm · rad: "+F(d.rejected)+" ta")+"</div>";
+ h+='<h2>Oxirgi 14 kun (daromad)</h2><div class="card"><div style="display:flex;align-items:flex-end;gap:4px;height:96px">'+d.daily.map(function(x){
+  return'<div title="'+E(x.date)+": "+F(x.revenue)+" so\'m, "+x.orders+' ta" style="flex:1;border-radius:4px 4px 0 0;background:'+(x.revenue?"var(--a)":"var(--r)")+";height:"+Math.max(4,Math.round(x.revenue/mx*100))+'%"></div>'}).join("")+
+  '</div><div class="row sp sub"><span>'+E(d.daily[0].date.slice(5))+"</span><span>"+E(d.daily[13].date.slice(5))+"</span></div></div>";
+ if(d.top_packages.length)h+="<h2>Top paketlar</h2>"+d.top_packages.map(function(r){return'<div class="card row sp"><div class="nm">'+F(r.uc)+' UC</div><div class="sub">'+F(r.orders)+" ta · "+F(r.revenue)+" so'm</div></div>"}).join("");
+ if(d.top_buyers.length)h+="<h2>Top xaridorlar</h2>"+d.top_buyers.map(function(r){return'<div class="card row sp"><div class="col"><div class="nm">'+(r.username?"@"+E(r.username):E(r.first_name||r.user_id))+'</div><div class="sub">ID <code>'+r.user_id+"</code> · "+F(r.orders)+' ta · '+F(r.uc)+' UC</div></div><b style="color:var(--y)">'+F(r.revenue)+"</b></div>"}).join("");
+ $("#ucv").innerHTML=h})}
+function copyTxt(t){if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast("📋 Nusxalandi: "+t)},function(){toast(t)});else toast(t)}
+function ucOrd(){var fs=[["pending","Kutilmoqda"],["","Hammasi"],["done","Yuborilgan"],["rejected","Rad"]];
+ api("/api/adm/uc/orders?status="+UC.ofil+"&q="+encodeURIComponent(UC.oq)).then(function(d){
+ if(d.error==="auth")return authFail();var rows=d.orders||[];
+ var h='<input id="ucq" placeholder="PUBG ID, nickname yoki user ID" value="'+E(UC.oq)+'"><div class="chips">'+fs.map(function(f){return'<button class="chip '+(f[0]===UC.ofil?"on":"")+'" data-f="'+f[0]+'">'+f[1]+"</button>"}).join("")+"</div>";
+ if(!rows.length)h+='<div class="empty">Buyurtma yo\'q</div>';
+ h+=rows.map(function(o){var wait=o.status==="pending"||o.status==="processing";
+  return'<div class="card"><div class="row sp"><div class="nm">#'+o.order_id+" · "+F(o.uc+o.bonus)+' UC</div><span class="tag s-'+E(o.status)+'">'+E(o.status)+"</span></div>"+
+  '<div class="row sp" style="margin-top:8px"><div class="col"><div class="sub">PUBG ID</div><div class="nm" style="font-size:18px;letter-spacing:.04em">'+E(o.pubg_id)+'</div><div class="sub">🎮 '+(o.nickname?"<b>"+E(o.nickname)+"</b> ✅":"nickname aniqlanmagan")+'</div></div><button class="btn n s" data-cp="'+E(o.pubg_id)+'">📋 Nusxa</button></div>'+
+  '<div class="sub" style="margin-top:6px">👤 '+(o.username?"@"+E(o.username):E(o.first_name||""))+" <code>"+o.user_id+"</code> · "+F(o.price)+" so'm</div>"+
+  '<div class="sub">'+E((o.created_at||"").replace("T"," ").slice(0,16))+"</div>"+
+  (wait?'<div class="acts"><button class="btn g" data-ok="'+o.order_id+'">✅ UC yuborildi</button><button class="btn e" data-no="'+o.order_id+'">❌ Rad</button></div>':"")+"</div>"}).join("");
+ $("#ucv").innerHTML=h;var tm;
+ $("#ucq").oninput=function(){UC.oq=this.value;clearTimeout(tm);tm=setTimeout(ucOrd,350)};
+ [].forEach.call(document.querySelectorAll("[data-f]"),function(b){b.onclick=function(){UC.ofil=b.dataset.f;ucOrd()}});
+ [].forEach.call(document.querySelectorAll("[data-cp]"),function(b){b.onclick=function(){copyTxt(b.dataset.cp)}});
+ [].forEach.call(document.querySelectorAll("[data-ok]"),function(b){b.onclick=function(){ask("PUBG ID ga UC yuborganingizni tasdiqlaysizmi? (#"+b.dataset.ok+")",function(){decide(b.dataset.ok,"approve",b)})}});
+ [].forEach.call(document.querySelectorAll("[data-no]"),function(b){b.onclick=function(){ask("Buyurtma #"+b.dataset.no+" rad etilib, pul qaytarilsinmi?",function(){decide(b.dataset.no,"reject",b)})}})})}
+function ucPk(){api("/api/adm/uc/packages").then(function(d){
+ if(d.error==="auth")return authFail();var rows=d.items||[];UC.pk=rows;
+ var h='<div class="card"><div class="lbl" style="margin-bottom:8px">Yangi paket</div><input id="pu" placeholder="UC miqdori (masalan 660)" inputmode="numeric"><input id="pb" placeholder="Bonus UC (ixtiyoriy)" inputmode="numeric"><input id="pp" placeholder="Narx (so\'m)" inputmode="numeric"><button class="btn g" id="padd" style="width:100%">➕ Qo\'shish</button></div><h2>Paketlar ('+rows.length+")</h2>";
+ if(!rows.length)h+='<div class="empty">Paket yo\'q</div>';
+ h+=rows.map(function(r){return'<div class="card"><div class="row sp"><div class="col"><div class="nm">'+F(r.uc)+" UC"+(r.bonus?" + "+F(r.bonus)+" bonus":"")+'</div><div class="sub"><b style="color:var(--y)">'+F(r.price)+" so'm</b> · "+(r.uc+r.bonus>0?F(r.price/(r.uc+r.bonus)):0)+' so\'m/UC</div></div><span class="tag s-'+(r.active?"active":"rejected")+'">'+(r.active?"sotuvda":"yashirin")+'</span></div><div class="acts"><button class="btn n s" data-e="'+r.id+'">✏️</button><button class="btn n s" data-t="'+r.id+'" data-a="'+r.active+'">'+(r.active?"Yashirish":"Yoqish")+'</button><button class="btn e s" data-x="'+r.id+'">🗑</button></div></div>'}).join("");
+ $("#ucv").innerHTML=h;
+ $("#padd").onclick=function(){var b=this;b.disabled=true;post("/api/adm/uc/packages",{uc:$("#pu").value,bonus:$("#pb").value,price:$("#pp").value}).then(function(r){b.disabled=false;if(r.ok){toast("✅ Qo'shildi");ucPk()}else toast("❌ "+ucErr(r))})};
+ [].forEach.call(document.querySelectorAll("[data-t]"),function(b){b.onclick=function(){post("/api/adm/uc/packages/"+b.dataset.t+"/update",{active:b.dataset.a!=="1"}).then(function(){ucPk()})}});
+ [].forEach.call(document.querySelectorAll("[data-x]"),function(b){b.onclick=function(){ask("Paket o'chirilsinmi? Buyurtmalar tarixi saqlanadi.",function(){post("/api/adm/uc/packages/"+b.dataset.x+"/delete").then(function(r){toast(r.ok?"🗑 O'chirildi":"❌ "+ucErr(r));ucPk()})})}});
+ [].forEach.call(document.querySelectorAll("[data-e]"),function(b){b.onclick=function(){var r=UC.pk.filter(function(x){return x.id==b.dataset.e})[0];if(!r)return;
+  modal("Paket #"+r.id,[{k:"uc",l:"UC miqdori",v:r.uc,m:"numeric"},{k:"bonus",l:"Bonus UC",v:r.bonus,m:"numeric"},{k:"price",l:"Narx (so'm)",v:r.price,m:"numeric"},{k:"sort",l:"Tartib raqami (kichigi birinchi)",v:r.sort,m:"numeric"}],"Saqlash",
+   function(v){return post("/api/adm/uc/packages/"+r.id+"/update",v).then(function(x){if(x.ok){toast("✅ Saqlandi");ucPk();return false}toast("❌ "+ucErr(x));return true})})}})})}
+function ucSet(){api("/api/adm/uc/settings").then(function(d){
+ if(d.error==="auth")return authFail();var en=d.enabled,rq=d.require_nick;
+ $("#ucv").innerHTML='<div class="card"><div class="sw"><div><div class="nm">UC sotuvi</div><div class="sub">O\'chiq bo\'lsa buyurtma qabul qilinmaydi</div></div><button class="btn s '+(en?"g":"e")+'" id="uce">'+(en?"ON":"OFF")+"</button></div></div>"+
+ "<h2>Nickname tekshiruvi</h2>"+
+ '<div class="card"><div class="sub" style="margin-bottom:8px">PUBG ID bo\'yicha nickname qaytaradigan API manzilini kiriting. ID o\'rniga <code>{id}</code> yozing (kalit kerak bo\'lsa <code>{key}</code> ham mumkin). Javob JSON bo\'lishi kerak.</div>'+
+ '<div class="lbl">API manzili</div><input id="ul1" value="'+E(d.lookup_url)+'" placeholder="https://example.com/api/player/{id}" inputmode="url" autocapitalize="off">'+
+ '<div class="lbl">JSON ichidagi nickname yo\'li</div><input id="ul2" value="'+E(d.lookup_path)+'" placeholder="data.nickname" autocapitalize="off">'+
+ '<div class="lbl">API kaliti '+(d.key_set?"(saqlangan; bo'sh qoldirsangiz o'zgarmaydi)":"(ixtiyoriy)")+'</div><input id="ul3" type="password" autocomplete="off" placeholder="'+(d.key_set?"yangi kalit":"kalit")+'">'+
+ '<div class="sw" style="margin:6px 0 12px"><div><div class="nm">Nickname majburiy</div><div class="sub">Tekshirib bo\'lmasa xarid qilib bo\'lmaydi</div></div><button class="btn s '+(rq?"g":"e")+'" id="ucr">'+(rq?"ON":"OFF")+'</button></div>'+
+ '<div class="lbl">Sinov: PUBG ID</div><input id="ul4" inputmode="numeric" placeholder="Sinash uchun ID"><div id="ult" class="sub"></div>'+
+ '<div class="acts"><button class="btn n" id="ultb">🔌 Sinash</button><button class="btn g" id="ulsv">💾 Saqlash</button></div></div>'+
+ '<div class="sub" style="padding:0 4px">Nickname tekshiruvi sozlanmasa ham xarid ishlaydi: mijoz ID ni o\'zi tasdiqlaydi, sizga esa nickname\'siz ariza keladi.</div>';
+ $("#uce").onclick=function(){en=!en;this.className="btn s "+(en?"g":"e");this.textContent=en?"ON":"OFF";post("/api/adm/uc/settings",{enabled:en}).then(function(){toast(en?"✅ Yoqildi":"⏸ To'xtatildi")})};
+ $("#ucr").onclick=function(){rq=!rq;this.className="btn s "+(rq?"g":"e");this.textContent=rq?"ON":"OFF"};
+ function save(){return post("/api/adm/uc/settings",{lookup_url:$("#ul1").value,lookup_path:$("#ul2").value,lookup_key:$("#ul3").value,require_nick:rq})}
+ $("#ulsv").onclick=function(){var b=this;b.disabled=true;save().then(function(r){b.disabled=false;toast(r.ok?"✅ Saqlandi":"❌ "+ucErr(r))})};
+ $("#ultb").onclick=function(){var o=$("#ult");o.textContent="Tekshirilmoqda…";save().then(function(s){if(!s.ok){o.textContent="❌ "+ucErr(s);return}
+  post("/api/adm/uc/lookup",{pubg_id:$("#ul4").value}).then(function(r){o.textContent=!r.ok?"❌ "+ucErr(r):r.status==="found"?"✅ Nickname: "+r.nickname:r.status==="not_found"?"⚠️ O'yinchi topilmadi":"❌ Javob olinmadi ("+(r.reason||"xato")+")"})})}})}
+
+api("/api/adm/overview").then(function(d){if(d.ok){pending=d.pending;nav()}});
+render();setInterval(function(){if(tab==="orders"&&!busy&&!document.activeElement.matches("input"))orders()},20000);
+})();
+</script>
+</body>
+</html>

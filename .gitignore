@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Muhit fayllari (maxfiy!)
+.env
+.env.*
+!.env.example
+
+# Ma'lumotlar bazasi va loglar
+data/
+*.db
+*.db-wal
+*.db-shm
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Test / qamrov
+.pytest_cache/
+.coverage
+htmlcov/

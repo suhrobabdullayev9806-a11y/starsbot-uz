@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>PUBG UC olish</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  /* ------------------------------------------------------------
+     G'oya: havodan tushgan ta'minot qutisi (airdrop).
+     Har bir UC paketi — qutiga o'xshaydi (burchak skobkalari, trafaret raqam).
+     Xaridor ID kiritganda esa uning nickname'i "dog tag" (askar nishoni)
+     shaklida paydo bo'ladi — ekrandagi eng esda qolarli joy shu.
+     Qolgan hamma narsa sokin: tungi dala rangi, xaki matn, bitta signal-to'q sariq.
+     ------------------------------------------------------------ */
+  :root {
+    --night:  #11130e;
+    --panel:  #1a1d15;
+    --raise:  #232719;
+    --line:   rgba(233,228,210,.10);
+    --text:   #ece7d6;
+    --mute:   #9a9783;
+    --flare:  #ff7a1a;
+    --flare-d:#2b1a0c;
+    --coin:   #f2c14e;
+    --ok:     #93d36b;
+    --bad:    #ff6b5e;
+    --warn:   #f2c14e;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    color-scheme: dark;
+  }
+  body.tg-light {
+    --night:#f3f1e8; --panel:#ffffff; --raise:#ebe8da; --line:rgba(40,38,20,.12);
+    --text:#1d1f14; --mute:#6c6a58; --flare:#e0610a; --flare-d:#fde9d7; --coin:#a06f00;
+    --ok:#3f8a1c; --bad:#c9372b; --warn:#a06f00; color-scheme: light;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { -webkit-text-size-adjust:100%; }
+  body {
+    background:var(--night); color:var(--text);
+    font-family:system-ui,-apple-system,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    font-feature-settings:"tnum" 1; -webkit-font-smoothing:antialiased;
+    min-height:100vh; padding-bottom:calc(112px + var(--safe-b));
+  }
+  body.locked { overflow:hidden; }
+  button { font:inherit; color:inherit; border:none; background:none; cursor:pointer; }
+  button:focus-visible, input:focus-visible { outline:2px solid var(--flare); outline-offset:2px; }
+  .app { max-width:520px; margin:0 auto; padding:0 16px; }
+
+  /* ---------- sarlavha ---------- */
+  .top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 0 6px; }
+  h1 { font-size:28px; font-weight:850; letter-spacing:-.025em; line-height:1; }
+  .sub { font-size:13.5px; color:var(--mute); margin-top:5px; }
+  .wallet { display:flex; align-items:center; gap:8px; padding:7px 7px 7px 13px; border-radius:999px;
+            background:var(--panel); border:1px solid var(--line); font-weight:750; font-size:14px; flex:none; }
+  .wallet:active { transform:scale(.96); }
+  .wallet .plus { width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+                  background:var(--flare); color:#1a0d02; font-size:17px; font-weight:800; line-height:1; }
+
+  /* ---------- bo'limlar ---------- */
+  section { margin-top:22px; }
+  h2 { font-size:16px; font-weight:750; margin-bottom:10px; letter-spacing:-.005em; }
+
+  /* ---------- PUBG ID maydoni ---------- */
+  .idbox { display:flex; align-items:center; gap:6px; background:var(--panel); border:1.5px solid var(--line);
+           border-radius:16px; padding:4px 6px 4px 16px; transition:border-color .15s; }
+  .idbox:focus-within { border-color:var(--flare); }
+  .idbox.bad { border-color:var(--bad); }
+  .idbox input { flex:1; min-width:0; background:none; border:none; outline:none; color:var(--text);
+                 font:inherit; font-size:22px; font-weight:750; letter-spacing:.06em; padding:13px 0; }
+  .idbox input::placeholder { color:var(--mute); font-weight:500; letter-spacing:.02em; font-size:16px; }
+  .chipbtn { padding:9px 13px; border-radius:11px; background:var(--raise); font-size:13.5px; font-weight:650; color:var(--text); flex:none; }
+  .chipbtn:active { transform:scale(.96); }
+  .hint { font-size:13px; color:var(--mute); margin:8px 2px 0; line-height:1.45; }
+  .recent { display:none; margin-top:10px; }
+  .recent button { padding:8px 13px; border-radius:999px; border:1px dashed var(--line); font-size:13.5px; color:var(--mute); }
+  .recent button b { color:var(--text); letter-spacing:.04em; margin-left:4px; }
+
+  /* ---------- dog tag (nickname) ---------- */
+  .tagwrap { display:none; margin-top:12px; }
+  .dogtag { position:relative; display:flex; align-items:center; gap:14px; padding:14px 18px 14px 16px; border-radius:18px 34px 34px 18px;
+            background:linear-gradient(135deg, #3b402d, #262a1c 60%); border:1px solid rgba(233,228,210,.18);
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.08); animation:drop .38s cubic-bezier(.2,.9,.3,1.2); }
+  body.tg-light .dogtag { background:linear-gradient(135deg,#dfe3cf,#c9cfb4 60%); border-color:rgba(40,38,20,.2); }
+  .dogtag::before { content:""; position:absolute; left:-1px; top:50%; width:11px; height:11px; margin-top:-5.5px; border-radius:50%;
+                    background:var(--night); border:1px solid rgba(233,228,210,.2); }
+  .dogtag .ava { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; flex:none; margin-left:8px;
+                 background:var(--flare); color:#1a0d02; font-size:20px; font-weight:850; }
+  .dogtag .who { min-width:0; flex:1; }
+  .dogtag .nick { font-size:19px; font-weight:800; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text); }
+  .dogtag .state { font-size:12.5px; margin-top:2px; color:var(--mute); display:flex; align-items:center; gap:6px; }
+  .dogtag.found .state { color:var(--ok); }
+  .dogtag.missing { background:color-mix(in srgb, var(--bad) 14%, var(--panel)); border-color:color-mix(in srgb, var(--bad) 45%, transparent); }
+  .dogtag.missing .ava { background:var(--bad); color:#fff; }
+  .dogtag.missing .state { color:var(--bad); }
+  .dogtag.unknown .ava { background:var(--raise); color:var(--mute); }
+  .dogtag.unknown .state { color:var(--warn); }
+  .dogtag .spin { width:15px; height:15px; border-radius:50%; border:2px solid var(--line); border-top-color:var(--flare); animation:spin .7s linear infinite; }
+  @keyframes drop { from { transform:translateY(-8px) rotate(-1.2deg); opacity:0; } to { transform:none; opacity:1; } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ---------- ogohlantirishlar ---------- */
+  .gate { display:none; margin-top:14px; padding:14px 16px; border-radius:16px; font-size:14px; line-height:1.45;
+          background:color-mix(in srgb, var(--bad) 12%, var(--panel)); border:1px solid color-mix(in srgb, var(--bad) 40%, transparent); }
+  .gate button { margin-top:10px; width:100%; padding:12px; border-radius:12px; font-weight:750; background:var(--text); color:var(--night); }
+
+  /* ---------- paket qutilari ---------- */
+  .crates { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .crate { position:relative; text-align:left; padding:16px 14px 14px; border-radius:6px; background:var(--panel);
+           border:1.5px solid var(--line); transition:border-color .15s, background .15s, transform .12s; }
+  .crate:active { transform:scale(.975); }
+  /* burchak skobkalari: quti trafareti */
+  .crate::before, .crate::after { content:""; position:absolute; width:12px; height:12px; border:2px solid var(--mute); opacity:.55; transition:border-color .15s, opacity .15s; }
+  .crate::before { left:5px; top:5px; border-right:none; border-bottom:none; }
+  .crate::after { right:5px; bottom:5px; border-left:none; border-top:none; }
+  .crate[aria-pressed="true"] { border-color:var(--flare); background:linear-gradient(180deg, var(--flare-d), var(--panel)); }
+  .crate[aria-pressed="true"]::before, .crate[aria-pressed="true"]::after { border-color:var(--flare); opacity:1; }
+  .crate .amt { display:flex; align-items:baseline; gap:5px; margin-top:6px; }
+  .crate .amt b { font-size:30px; font-weight:900; letter-spacing:-.03em; line-height:1; }
+  .crate .amt span { font-size:13px; font-weight:800; color:var(--coin); }
+  .crate .bonus { display:inline-block; margin-top:7px; padding:3px 8px; border-radius:999px; font-size:12px; font-weight:750;
+                  background:color-mix(in srgb, var(--ok) 18%, transparent); color:var(--ok); }
+  .crate .nob { display:block; height:25px; }
+  .crate .cost { margin-top:10px; font-size:15px; font-weight:800; }
+  .crate .cost small { font-size:12px; font-weight:600; color:var(--mute); margin-left:3px; }
+  .crate .per { font-size:12px; color:var(--mute); margin-top:2px; }
+  .coin { width:22px; height:22px; flex:none; }
+  .crate .coin { position:absolute; right:12px; top:12px; }
+
+  .skel .crate { height:134px; animation:pulse 1.3s ease-in-out infinite; border-style:dashed; }
+  @keyframes pulse { 50% { opacity:.5; } }
+  .empty { display:none; text-align:center; padding:34px 20px; color:var(--mute); font-size:14.5px; line-height:1.5; }
+
+  /* ---------- tarix ---------- */
+  .hist { display:flex; flex-direction:column; gap:8px; }
+  .h-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; background:var(--panel); border:1px solid var(--line); }
+  .h-row .l { flex:1; min-width:0; }
+  .h-row .t { font-weight:750; font-size:15px; }
+  .h-row .m { font-size:12.5px; color:var(--mute); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pill { font-size:12px; font-weight:750; padding:4px 10px; border-radius:999px; flex:none; }
+  .pill.pending { background:color-mix(in srgb, var(--warn) 18%, transparent); color:var(--warn); }
+  .pill.done { background:color-mix(in srgb, var(--ok) 18%, transparent); color:var(--ok); }
+  .pill.rejected { background:color-mix(in srgb, var(--bad) 16%, transparent); color:var(--bad); }
+
+  /* ---------- pastki panel ---------- */
+  .bar { position:fixed; left:0; right:0; bottom:0; z-index:20; padding:12px 16px calc(12px + var(--safe-b));
+         background:linear-gradient(transparent, var(--night) 28%); }
+  .bar .in { max-width:520px; margin:0 auto; display:flex; align-items:center; gap:14px; }
+  .sum { flex:1; min-width:0; }
+  .sum .a { font-size:13px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sum .p { font-size:19px; font-weight:850; letter-spacing:-.015em; }
+  .go { flex:none; padding:15px 24px; border-radius:15px; font-weight:800; font-size:16px; background:var(--flare); color:#1a0d02;
+        transition:transform .12s, opacity .15s; }
+  .go:active { transform:scale(.97); }
+  .go:disabled { opacity:.38; }
+  .go.topup { background:var(--text); color:var(--night); }
+
+  /* ---------- tasdiqlash oynasi ---------- */
+  .shade { position:fixed; inset:0; z-index:40; background:rgba(4,6,2,.66); opacity:0; pointer-events:none; transition:opacity .22s; }
+  .shade.on { opacity:1; pointer-events:auto; }
+  .sheet { position:fixed; left:0; right:0; bottom:0; z-index:41; max-width:520px; margin:0 auto; background:var(--night);
+           border-radius:24px 24px 0 0; border:1px solid var(--line); border-bottom:none;
+           padding:10px 18px calc(20px + var(--safe-b)); transform:translateY(105%); transition:transform .3s cubic-bezier(.2,.8,.2,1); max-height:92vh; overflow:auto; }
+  .sheet.on { transform:none; }
+  .grip { width:40px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 14px; }
+  .sheet h3 { font-size:20px; font-weight:850; letter-spacing:-.02em; margin-bottom:12px; }
+  .rows { margin:14px 0 4px; border-top:1px solid var(--line); }
+  .rows div { display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); font-size:15px; }
+  .rows span { color:var(--mute); }
+  .rows b { font-weight:750; text-align:right; }
+  .rows .after b { color:var(--coin); }
+  .agree { display:none; gap:11px; align-items:flex-start; margin-top:14px; padding:12px 14px; border-radius:14px; font-size:13.5px; line-height:1.45;
+           background:color-mix(in srgb, var(--warn) 12%, var(--panel)); border:1px solid color-mix(in srgb, var(--warn) 38%, transparent); }
+  .agree input { width:20px; height:20px; margin-top:1px; accent-color:var(--flare); flex:none; }
+  .sheet .go { width:100%; margin-top:16px; }
+  .sheet .alt { width:100%; margin-top:8px; padding:13px; border-radius:14px; color:var(--mute); font-weight:650; }
+
+  /* ---------- muvaffaqiyat ---------- */
+  .done { display:none; text-align:center; padding:46px 8px 20px; }
+  .stamp { width:92px; height:92px; margin:0 auto 18px; border-radius:50%; display:grid; place-items:center; border:3px solid var(--ok); color:var(--ok);
+           animation:stamp .45s cubic-bezier(.2,1.4,.4,1); }
+  .stamp svg { width:46px; height:46px; }
+  @keyframes stamp { from { transform:scale(1.7) rotate(-14deg); opacity:0; } to { transform:none; opacity:1; } }
+  .done h2 { font-size:24px; font-weight:850; margin-bottom:6px; }
+  .done p { color:var(--mute); font-size:14.5px; line-height:1.5; max-width:34ch; margin:0 auto; }
+  .done .dogtag { margin:22px auto 0; text-align:left; max-width:360px; animation:none; }
+  .done .btns { display:flex; flex-direction:column; gap:8px; margin-top:24px; }
+  .done .btns .go { width:100%; }
+  .done .btns .alt { padding:13px; border-radius:14px; color:var(--mute); font-weight:650; }
+
+  .toast { position:fixed; left:50%; top:14px; z-index:60; transform:translate(-50%,-90px); max-width:92%; padding:11px 16px; border-radius:13px;
+           background:var(--panel); border:1px solid var(--line); font-size:14px; font-weight:600; transition:transform .25s; box-shadow:0 8px 28px rgba(0,0,0,.35); }
+  .toast.on { transform:translate(-50%,0); }
+
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <div>
+      <h1>PUBG UC</h1>
+      <div class="sub">ID kiriting, paketni tanlang, hisobingizdan to'lang</div>
+    </div>
+    <button class="wallet" id="wallet" type="button" aria-label="Hisobni to'ldirish">
+      <span id="bal">…</span><span class="plus" aria-hidden="true">+</span>
+    </button>
+  </div>
+
+  <div class="gate" id="gate"></div>
+
+  <div id="main">
+    <section>
+      <h2>PUBG Mobile ID</h2>
+      <div class="idbox" id="idbox">
+        <input id="pid" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="18" placeholder="Masalan: 5123456789" aria-label="PUBG ID">
+        <button class="chipbtn" id="paste" type="button">Qo'yish</button>
+      </div>
+      <div class="recent" id="recent"></div>
+      <div class="tagwrap" id="tagwrap" aria-live="polite"></div>
+      <div class="hint" id="idhint">ID o'yin ichida profil rasmingiz ostida ko'rinadi.</div>
+    </section>
+
+    <section>
+      <h2>UC paketi</h2>
+      <div class="crates skel" id="crates">
+        <div class="crate"></div><div class="crate"></div><div class="crate"></div><div class="crate"></div>
+      </div>
+      <div class="empty" id="nopk">Hozircha paketlar yo'q. Admin tez orada qo'shadi.</div>
+    </section>
+
+    <section id="histsec" style="display:none">
+      <h2>Oxirgi buyurtmalar</h2>
+      <div class="hist" id="hist"></div>
+    </section>
+  </div>
+
+  <div class="done" id="done">
+    <div class="stamp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>Buyurtma qabul qilindi</h2>
+    <p id="donetext"></p>
+    <div id="donetag"></div>
+    <div class="btns">
+      <button class="go" id="again" type="button">Yana UC olish</button>
+      <button class="alt" id="close" type="button">Botga qaytish</button>
+    </div>
+  </div>
+</div>
+
+<div class="bar" id="bar">
+  <div class="in">
+    <div class="sum"><div class="a" id="sa">Paket tanlang</div><div class="p" id="sp">—</div></div>
+    <button class="go" id="go" type="button" disabled>Sotib olish</button>
+  </div>
+</div>
+
+<div class="shade" id="shade"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Buyurtmani tasdiqlash">
+  <div class="grip"></div>
+  <h3>Buyurtmani tasdiqlang</h3>
+  <div id="stag"></div>
+  <div class="rows" id="srows"></div>
+  <label class="agree" id="agree"><input type="checkbox" id="agreechk"><span>Nickname avtomatik tekshirilmadi. PUBG ID to'g'riligiga ishonch hosil qildim: xato ID ga yuborilgan UC qaytarilmaydi.</span></label>
+  <button class="go" id="confirm" type="button">To'lash</button>
+  <button class="alt" id="cancel" type="button">Orqaga</button>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  "use strict";
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    try { tg.expand(); tg.ready(); } catch (e) {}
+    if (tg.colorScheme === "light") document.body.classList.add("tg-light");
+    try {
+      var c = tg.colorScheme === "light" ? "#f3f1e8" : "#11130e";
+      tg.setHeaderColor(c); tg.setBackgroundColor(c); tg.setBottomBarColor && tg.setBottomBarColor(c);
+    } catch (e) {}
+  }
+  var headers = { "X-Telegram-Init-Data": (tg && tg.initData) || "", "Content-Type": "application/json" };
+  var $ = function (id) { return document.getElementById(id); };
+  var S = { info: null, pid: "", pkg: null, nick: { status: "idle", name: "" }, busy: false, seq: 0, timer: 0 };
+
+  var ERR = {
+    subscribe: "Avval kanalga obuna bo'ling", disabled: "UC sotuvi vaqtincha to'xtatilgan",
+    no_package: "Bu paket sotuvda yo'q. Sahifani yangilang", bad_pubg_id: "PUBG ID noto'g'ri: faqat raqamlar, 5–14 ta",
+    player_not_found: "Bunday PUBG ID topilmadi. ID ni tekshiring", nick_required: "Nickname tekshirilmadi. Birozdan keyin qayta urining",
+    duplicate: "Bu buyurtma hozirgina yuborilgan", insufficient_sum: "Hisobingizda mablag' yetarli emas",
+    too_fast: "Juda tez. Bir necha soniya kuting", auth: "Mini-appni botdagi tugma orqali oching",
+    network: "Internet bilan aloqa yo'q", server: "Serverda xatolik. Keyinroq urinib ko'ring", bad_request: "So'rov noto'g'ri"
+  };
+  var STATUS = { pending: "Kutilmoqda", processing: "Kutilmoqda", done: "Yuborildi", rejected: "Bekor qilindi" };
+
+  /* ---------- yordamchilar ---------- */
+  function money(n) { return Math.round(Number(n) || 0).toLocaleString("ru-RU"); }
+  function api(path, body) {
+    var o = { headers: headers, cache: "no-store" };
+    if (body !== undefined) { o.method = "POST"; o.body = JSON.stringify(body); }
+    return fetch(path, o)
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: "server" }; }).then(function (d) { if (r.status === 401) d.error = "auth"; return d; }); })
+      .catch(function () { return { ok: false, error: "network" }; });
+  }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function haptic(k) { try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(k); } catch (e) {} }
+  function tick() { try { tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged(); } catch (e) {} }
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.classList.add("on");
+    clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove("on"); }, 3200);
+  }
+  function normId(v) { return String(v || "").replace(/[\s\-_]/g, ""); }
+  function idOk(v) { return /^\d{5,14}$/.test(v); }
+  function coinSvg() {
+    var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", "coin"); s.setAttribute("aria-hidden", "true");
+    s.innerHTML = '<circle cx="12" cy="12" r="10" fill="#f2c14e"/><circle cx="12" cy="12" r="7.6" fill="none" stroke="#a06f00" stroke-width="1.4"/><path d="M8.6 8.2v4.6a3.4 3.4 0 006.8 0V8.2" fill="none" stroke="#7a5200" stroke-width="1.8" stroke-linecap="round"/>';
+    return s;
+  }
+  function total(p) { return p.uc + (p.bonus || 0); }
+
+  /* ---------- dog tag ---------- */
+  function dogtag(kind, name, stateText) {
+    var d = el("div", "dogtag " + kind);
+    var ava = el("div", "ava", kind === "found" ? (name.trim().charAt(0) || "?").toUpperCase() : (kind === "missing" ? "!" : "?"));
+    var who = el("div", "who");
+    who.appendChild(el("div", "nick", name));
+    var st = el("div", "state");
+    if (kind === "busy") st.appendChild(el("span", "spin"));
+    st.appendChild(document.createTextNode(stateText));
+    who.appendChild(st);
+    d.appendChild(ava); d.appendChild(who);
+    return d;
+  }
+  function tagFor(n, pid) {
+    if (n.status === "found") return dogtag("found", n.name, "Nickname tasdiqlandi");
+    if (n.status === "checking") return dogtag("busy", "ID " + pid, "Nickname qidirilmoqda…");
+    if (n.status === "not_found") return dogtag("missing", "ID topilmadi", "Bunday o'yinchi yo'q. ID ni tekshiring");
+    return dogtag("unknown", "Nickname noma'lum", S.info && S.info.can_verify ? "Hozir tekshirib bo'lmadi" : "Avto-tekshiruv o'chiq. ID ni o'zingiz tekshiring");
+  }
+  function renderTag() {
+    var w = $("tagwrap"), pid = S.pid;
+    if (!idOk(pid) || S.nick.status === "idle") { w.style.display = "none"; w.textContent = ""; return; }
+    w.style.display = "block"; w.textContent = "";
+    w.appendChild(tagFor(S.nick, pid));
+    $("idbox").classList.toggle("bad", S.nick.status === "not_found");
+  }
+
+  /* ---------- nickname qidirish ---------- */
+  function onId() {
+    S.pid = normId($("pid").value);
+    clearTimeout(S.timer);
+    $("idbox").classList.remove("bad");
+    if (!idOk(S.pid)) { S.nick = { status: "idle", name: "" }; renderTag(); refresh(); return; }
+    S.nick = { status: "checking", name: "" }; renderTag(); refresh();
+    var my = ++S.seq, pid = S.pid;
+    S.timer = setTimeout(function () {
+      api("/api/uc/lookup", { pubg_id: pid }).then(function (r) {
+        if (my !== S.seq) return;
+        if (!r.ok) { S.nick = { status: "unavailable", name: "" }; if (r.error === "too_fast") toast(ERR.too_fast); }
+        else if (r.status === "found") { S.nick = { status: "found", name: r.nickname }; tick(); }
+        else if (r.status === "not_found") { S.nick = { status: "not_found", name: "" }; haptic("error"); }
+        else S.nick = { status: "unavailable", name: "" };
+        renderTag(); refresh();
+      });
+    }, 450);
+  }
+
+  /* ---------- paketlar ---------- */
+  function renderCrates() {
+    var box = $("crates"); box.className = "crates"; box.textContent = "";
+    var pk = S.info.packages;
+    $("nopk").style.display = pk.length ? "none" : "block";
+    pk.forEach(function (p) {
+      var b = el("button", "crate"); b.type = "button";
+      b.setAttribute("aria-pressed", S.pkg && S.pkg.id === p.id ? "true" : "false");
+      b.appendChild(coinSvg());
+      var amt = el("div", "amt"); amt.appendChild(el("b", "", money(total(p)))); amt.appendChild(el("span", "", "UC"));
+      b.appendChild(amt);
+      if (p.bonus) b.appendChild(el("span", "bonus", "+" + money(p.bonus) + " bonus"));
+      else b.appendChild(el("span", "nob"));
+      var cost = el("div", "cost", money(p.price)); cost.appendChild(el("small", "", "so'm")); b.appendChild(cost);
+      b.appendChild(el("div", "per", money(p.price / total(p)) + " so'm / UC"));
+      b.onclick = function () { S.pkg = p; tick(); renderCrates(); refresh(); };
+      box.appendChild(b);
+    });
+  }
+
+  /* ---------- pastki panel holati ---------- */
+  function refresh() {
+    var i = S.info, go = $("go");
+    if (!i) return;
+    $("bal").textContent = money(i.balance_sum) + " so'm";
+    var p = S.pkg;
+    $("sa").textContent = p ? money(total(p)) + " UC" : "Paket tanlang";
+    $("sp").textContent = p ? money(p.price) + " so'm" : "—";
+    go.className = "go"; go.disabled = false;
+    if (!i.enabled || i.need_sub) { go.textContent = i.need_sub ? "Obuna kerak" : "To'xtatilgan"; go.disabled = true; return; }
+    if (!p) { go.textContent = "Sotib olish"; go.disabled = true; return; }
+    if (i.balance_sum + 1e-9 < p.price) { go.textContent = "Hisobni to'ldirish"; go.className = "go topup"; return; }
+    if (!idOk(S.pid)) { go.textContent = "ID kiriting"; go.disabled = true; return; }
+    if (S.nick.status === "checking") { go.textContent = "Tekshirilmoqda…"; go.disabled = true; return; }
+    if (S.nick.status === "not_found") { go.textContent = "ID topilmadi"; go.disabled = true; return; }
+    if (i.require_nick && S.nick.status !== "found") { go.textContent = "Nickname kerak"; go.disabled = true; return; }
+    go.textContent = "Sotib olish";
+  }
+
+  /* ---------- tasdiqlash oynasi ---------- */
+  function openSheet() {
+    var p = S.pkg, i = S.info;
+    $("stag").textContent = ""; $("stag").appendChild(tagFor(S.nick, S.pid));
+    var rows = $("srows"); rows.textContent = "";
+    [["PUBG ID", S.pid], ["Paket", money(total(p)) + " UC" + (p.bonus ? " (shundan bonus " + money(p.bonus) + ")" : "")],
+     ["Narxi", money(p.price) + " so'm"]].forEach(function (r) {
+      var d = el("div"); d.appendChild(el("span", "", r[0])); d.appendChild(el("b", "", r[1])); rows.appendChild(d);
+    });
+    var after = el("div", "after"); after.appendChild(el("span", "", "Hisobda qoladi")); after.appendChild(el("b", "", money(i.balance_sum - p.price) + " so'm")); rows.appendChild(after);
+    var unverified = S.nick.status !== "found";
+    $("agree").style.display = unverified ? "flex" : "none";
+    $("agreechk").checked = false;
+    $("confirm").disabled = unverified; $("confirm").textContent = "To'lash · " + money(p.price) + " so'm";
+    $("shade").classList.add("on"); $("sheet").classList.add("on"); document.body.classList.add("locked");
+  }
+  function closeSheet() { $("shade").classList.remove("on"); $("sheet").classList.remove("on"); document.body.classList.remove("locked"); }
+  $("agreechk").onchange = function () { $("confirm").disabled = !this.checked; };
+  $("shade").onclick = $("cancel").onclick = closeSheet;
+
+  $("go").onclick = function () {
+    if (!S.pkg || S.busy) return;
+    if (S.info.balance_sum + 1e-9 < S.pkg.price) { location.href = "/app?tab=topup"; return; }
+    openSheet();
+  };
+  $("wallet").onclick = function () { location.href = "/app?tab=topup"; };
+
+  $("confirm").onclick = function () {
+    if (S.busy) return; S.busy = true;
+    var btn = this, label = btn.textContent; btn.disabled = true; btn.textContent = "Yuborilmoqda…";
+    api("/api/uc/buy", { package_id: S.pkg.id, pubg_id: S.pid }).then(function (r) {
+      S.busy = false; btn.textContent = label;
+      if (!r.ok) {
+        btn.disabled = false; haptic("error"); closeSheet();
+        if (typeof r.balance_sum === "number") S.info.balance_sum = r.balance_sum;
+        toast(ERR[r.error] || "Xatolik: " + (r.error || "noma'lum"));
+        if (r.error === "no_package" || r.error === "disabled") load();
+        if (r.error === "player_not_found") { S.nick = { status: "not_found", name: "" }; renderTag(); }
+        refresh(); return;
+      }
+      haptic("success"); closeSheet(); S.info.balance_sum = r.balance_sum; showDone(r);
+    });
+  };
+
+  /* ---------- muvaffaqiyat ---------- */
+  function showDone(r) {
+    $("main").style.display = "none"; $("bar").style.display = "none"; $("done").style.display = "block";
+    $("donetext").textContent = "Buyurtma №" + r.order_id + ": " + money(r.uc) + " UC. Admin UC ni yuborgach, bot sizga xabar yozadi.";
+    var t = $("donetag"); t.textContent = "";
+    t.appendChild(r.nickname ? dogtag("found", r.nickname, "ID " + r.pubg_id) : dogtag("unknown", "ID " + r.pubg_id, "Nickname tekshirilmagan"));
+    $("bal").textContent = money(r.balance_sum) + " so'm";
+    window.scrollTo(0, 0);
+  }
+  $("again").onclick = function () {
+    $("done").style.display = "none"; $("main").style.display = "block"; $("bar").style.display = "block";
+    S.pkg = null; load();
+  };
+  $("close").onclick = function () { if (tg && tg.close) tg.close(); else history.back(); };
+
+  /* ---------- ID maydoni tugmalari ---------- */
+  $("pid").oninput = function () {
+    var d = this.value.replace(/[^\d\s\-]/g, ""); if (d !== this.value) this.value = d; onId();
+  };
+  $("paste").onclick = function () {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (t) { $("pid").value = (t || "").replace(/[^\d\s\-]/g, "").slice(0, 18); onId(); })
+        .catch(function () { $("pid").focus(); toast("Qo'yish uchun maydonni bosib ushlab turing"); });
+    } else { $("pid").focus(); toast("Qo'yish uchun maydonni bosib ushlab turing"); }
+  };
+
+  /* ---------- tarix ---------- */
+  function renderHist() {
+    var h = S.info.history || [];
+    $("histsec").style.display = h.length ? "block" : "none";
+    var box = $("hist"); box.textContent = "";
+    h.forEach(function (o) {
+      var row = el("div", "h-row"), l = el("div", "l");
+      l.appendChild(el("div", "t", money(o.uc) + " UC · " + money(o.price) + " so'm"));
+      l.appendChild(el("div", "m", (o.nickname ? o.nickname + " · " : "") + "ID " + o.pubg_id + " · №" + o.order_id));
+      var cls = o.status === "done" ? "done" : (o.status === "rejected" ? "rejected" : "pending");
+      row.appendChild(l); row.appendChild(el("span", "pill " + cls, STATUS[o.status] || o.status));
+      box.appendChild(row);
+    });
+  }
+  function renderRecent() {
+    var r = $("recent"), last = S.info.last_pubg_id;
+    r.textContent = "";
+    if (last && !S.pid) {
+      var b = el("button", "", "Oxirgi ID:"); b.type = "button"; b.appendChild(el("b", "", last));
+      b.onclick = function () { $("pid").value = last; onId(); r.style.display = "none"; };
+      r.appendChild(b); r.style.display = "block";
+    } else r.style.display = "none";
+  }
+
+  /* ---------- yuklash ---------- */
+  function load() {
+    return api("/api/uc/info").then(function (r) {
+      if (!r.ok) {
+        $("crates").className = "crates"; $("crates").textContent = "";
+        var g = $("gate"); g.style.display = "block"; g.textContent = ERR[r.error] || "Yuklab bo'lmadi. Keyinroq urinib ko'ring.";
+        return;
+      }
+      S.info = r;
+      if (S.pkg) S.pkg = r.packages.filter(function (p) { return p.id === S.pkg.id; })[0] || null;
+      var g2 = $("gate"); g2.textContent = ""; g2.style.display = "none";
+      if (r.need_sub) {
+        g2.style.display = "block";
+        g2.appendChild(document.createTextNode("UC olish uchun avval @" + r.channel + " kanaliga obuna bo'ling."));
+        var jb = el("button", "", "Kanalga o'tish"); jb.type = "button";
+        jb.onclick = function () { var u = "https://t.me/" + r.channel; if (tg && tg.openTelegramLink) tg.openTelegramLink(u); else location.href = u; };
+        g2.appendChild(jb);
+      } else if (!r.enabled) {
+        g2.style.display = "block"; g2.textContent = "UC sotuvi vaqtincha to'xtatilgan. Birozdan keyin qaytib keling.";
+      }
+      $("idhint").textContent = r.can_verify ? "ID kiritilgach nickname avtomatik ko'rsatiladi." : "ID o'yin ichida profil rasmingiz ostida ko'rinadi.";
+      renderCrates(); renderHist(); renderRecent(); renderTag(); refresh();
+    });
+  }
+  load();
+})();
+</script>
+</body>
+</html>

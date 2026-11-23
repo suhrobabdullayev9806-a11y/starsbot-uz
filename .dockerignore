@@ -1,0 +1,19 @@
+# Docker qurilishidan chetlatiladigan fayllar
+venv/
+.venv/
+env/
+data/
+*.db
+*.db-wal
+*.db-shm
+*.log
+.pytest_cache/
+__pycache__/
+*.pyc
+.git/
+.github/
+tests/
+tools/
+.env
+.env.*
+!.env.example

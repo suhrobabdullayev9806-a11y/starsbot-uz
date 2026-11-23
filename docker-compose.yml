@@ -1,0 +1,22 @@
+# ===================================================================
+# docker-compose.yml
+# Usage:
+#   cp .env.example .env   # token va admin id kiriting
+#   docker compose up -d --build
+# ===================================================================
+
+services:
+  bot:
+    build: .
+    container_name: auto-stars-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Tashkent
+    ports:
+      - "8080:8080"          # WebApp admin paneli
+    volumes:
+      - ./data:/app/data     # SQLite ma'lumotlar bazasi saqlanadi
+    security_opt:
+      - no-new-privileges:true

@@ -1,0 +1,52 @@
+# ===================================================================
+# render.yaml - Render Blueprint (Infrastructure as Code)
+# Render'da: New + -> Blueprint -> GitHub repo'ni tanlang.
+#
+# MUHIM:
+#  - Bot polling bilan ishlaydi va SQLite ishlatadi, shuning uchun
+#    FAQAT 1 ta instans bo'lishi kerak (numInstances: 1).
+#  - SQLite ma'lumotlari saqlanib qolishi uchun Persistent Disk kerak,
+#    disk esa pullik tarifni (Starter+) talab qiladi.
+#  - Bepul (free) tarifda disk yo'q: har deploy/restartda baza o'chadi!
+#    Faqat sinov uchun: plan: free ni yozib, disk: blokini o'chiring.
+# ===================================================================
+services:
+  - type: web
+    name: stars-bot
+    runtime: python
+    plan: starter
+    region: frankfurt
+    numInstances: 1
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: python -m src.main
+    healthCheckPath: /healthz
+    autoDeploy: true
+    disk:
+      name: stars-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: TZ
+        value: Asia/Tashkent
+      # SQLite fayli Persistent Disk ichida
+      - key: DB_PATH
+        value: /var/data/stars.db
+      # Pullik tarifda servis uxlamaydi, self-ping kerak emas
+      - key: KEEP_ALIVE
+        value: "0"
+      - key: LOG_TO_FILE
+        value: "0"
+      # --- Maxfiy qiymatlar: Render ularni deploy paytida so'raydi ---
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: SUPER_ADMIN_ID
+        sync: false
+      # Ixtiyoriy (Dashboard -> Environment da qo'shing):
+      #   REQUIRED_CHANNEL, REQUIRED_CHANNEL_ID, PAYMENTS_PROVIDER_TOKEN,
+      #   PAYMENT_CARD, PAYMENT_CARD_HOLDER, STARS_API_BASE_URL, STARS_API_KEY, API_CALLBACK_SECRET,
+      #   BANK_WEBHOOK_SECRET (yoki BANK_SESSION + BANK_SOURCE_CHATS) — avto-to'lov uchun
+      # WEBAPP_BASE_URL kerak emas: Render'ning RENDER_EXTERNAL_URL i avtomatik olinadi.

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>NFT olish</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  /* ------------------------------------------------------------
+     Dizayn g'oyasi: har bir NFT o'z "Backdrop" rangida yashaydi.
+     Karta, tafsilot oynasi va uning yorug'ligi shu rangdan olinadi —
+     xuddi Telegram'dagi kolleksiya giftlardek. Qolgan hamma narsa
+     jim va sokin: to'q ko'k-kulrang fon, bitta oltin narx rangi.
+     ------------------------------------------------------------ */
+  :root {
+    --ink:    #0e1117;
+    --panel:  #161a22;
+    --raise:  #1e232d;
+    --hair:   rgba(255,255,255,.07);
+    --text:   #eef1f6;
+    --mute:   #8b94a5;
+    --ice:    #67b4ff;
+    --gold:   #f4c35f;
+    --ok:     #3ddc97;
+    --bad:    #ff6b6b;
+    --glass:  rgba(14,17,23,.52);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    color-scheme: dark;
+  }
+  body.tg-light {
+    --ink:#f2f4f8; --panel:#ffffff; --raise:#e8ecf3; --hair:rgba(15,23,42,.08);
+    --text:#111827; --mute:#5d6778; --ice:#1d7fe0; --gold:#b9770e; --glass:rgba(255,255,255,.6);
+    color-scheme: light;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { -webkit-text-size-adjust:100%; }
+  body {
+    background:var(--ink); color:var(--text);
+    font-family:system-ui,-apple-system,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    font-feature-settings:"tnum" 1, "cv11" 1;
+    min-height:100vh; padding-bottom:calc(28px + var(--safe-b));
+    -webkit-font-smoothing:antialiased;
+  }
+  body.locked { overflow:hidden; }
+  button { font:inherit; color:inherit; border:none; background:none; cursor:pointer; }
+  button:focus-visible, input:focus-visible, a:focus-visible { outline:2px solid var(--ice); outline-offset:2px; }
+
+  .app { max-width:520px; margin:0 auto; }
+
+  /* ---------- sarlavha ---------- */
+  .top {
+    position:sticky; top:0; z-index:20; padding:14px 16px 10px;
+    background:linear-gradient(var(--ink) 72%, transparent);
+  }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  h1 { font-size:27px; font-weight:800; letter-spacing:-.02em; line-height:1.05; }
+  .tagline { font-size:13px; color:var(--mute); margin-top:3px; }
+  .wallet {
+    display:flex; align-items:center; gap:8px; padding:7px 8px 7px 12px; border-radius:999px;
+    background:var(--panel); border:1px solid var(--hair); font-weight:700; font-size:14px;
+    transition:transform .12s;
+  }
+  .wallet:active { transform:scale(.96); }
+  .wallet svg { width:17px; height:17px; color:var(--mute); flex:none; }
+  .wallet .plus {
+    width:24px; height:24px; border-radius:50%; display:grid; place-items:center; flex:none;
+    background:var(--ice); color:#06121f; font-size:17px; line-height:1; font-weight:800;
+  }
+
+  /* ---------- qidiruv, kolleksiya, tartib ---------- */
+  .tools { padding:0 16px; }
+  .search { position:relative; margin:6px 0 12px; }
+  .search svg { position:absolute; left:14px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--mute); }
+  .search input {
+    width:100%; background:var(--panel); border:1px solid var(--hair); color:var(--text);
+    font:inherit; font-size:15px; padding:13px 14px 13px 42px; border-radius:14px; outline:none;
+  }
+  .search input::placeholder { color:var(--mute); }
+  .search input:focus { border-color:color-mix(in srgb, var(--ice) 60%, transparent); }
+  .chips { display:flex; gap:8px; overflow-x:auto; padding:0 16px 2px; margin:0 -16px; scrollbar-width:none; }
+  .chips::-webkit-scrollbar { display:none; }
+  .chip {
+    flex:none; padding:8px 14px; border-radius:999px; font-size:13.5px; font-weight:650; color:var(--mute);
+    background:var(--panel); border:1px solid var(--hair); transition:background .15s,color .15s;
+  }
+  .chip b { font-weight:700; opacity:.6; margin-left:5px; }
+  .chip[aria-pressed="true"] { background:var(--text); color:var(--ink); border-color:transparent; }
+  .sorts { display:flex; gap:18px; margin:14px 2px 12px; font-size:13.5px; }
+  .sort { color:var(--mute); font-weight:600; padding:2px 0; border-bottom:2px solid transparent; }
+  .sort[aria-pressed="true"] { color:var(--text); border-bottom-color:var(--text); }
+
+  /* ---------- obuna ogohlantirishi ---------- */
+  .gate { display:none; margin:0 16px 14px; padding:14px 16px; border-radius:16px; font-size:14px; line-height:1.45;
+          background:color-mix(in srgb, var(--bad) 12%, var(--panel)); border:1px solid color-mix(in srgb, var(--bad) 40%, transparent); }
+  .gate button { margin-top:10px; width:100%; padding:12px; border-radius:12px; font-weight:700; background:var(--text); color:var(--ink); }
+
+  /* ---------- katalog ---------- */
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; padding:0 16px; }
+  .card { text-align:left; display:block; border-radius:20px; background:var(--panel); border:1px solid var(--hair);
+          overflow:hidden; transition:transform .14s ease; }
+  .card:active { transform:scale(.97); }
+
+  /* Backdrop: NFT'ning o'z rangi (--bd) dan radial gradient + nozik naqsh */
+  .tile {
+    position:relative; aspect-ratio:1/1; overflow:hidden; background:var(--bd, #39424f);
+    background:
+      radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--bd) 62%, #fff) 0%, var(--bd) 46%, color-mix(in srgb, var(--bd) 52%, #000) 100%);
+  }
+  .tile::before {
+    content:""; position:absolute; inset:0; opacity:.16; pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='46' viewBox='0 0 46 46'%3E%3Cpath d='M23 9l2.6 8.4L34 20l-8.4 2.6L23 31l-2.6-8.4L12 20l8.4-2.6z' fill='white'/%3E%3C/svg%3E");
+    background-size:46px 46px; background-position:6px 6px;
+    -webkit-mask-image:radial-gradient(circle at 50% 42%, transparent 30%, #000 85%);
+            mask-image:radial-gradient(circle at 50% 42%, transparent 30%, #000 85%);
+  }
+  .tile img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .35s; }
+  .tile img.on { opacity:1; }
+  .tile .no { position:absolute; inset:0; display:grid; place-items:center; font-size:15px; font-weight:800; color:rgba(255,255,255,.55); letter-spacing:.01em; }
+  .tag {
+    position:absolute; left:8px; bottom:8px; max-width:calc(100% - 16px); padding:4px 9px; border-radius:999px;
+    font-size:11.5px; font-weight:650; color:#fff; background:var(--glass); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  body.tg-light .tag { color:#111827; }
+  .meta { padding:10px 12px 13px; }
+  .nm { font-size:14.5px; font-weight:750; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .num { font-size:12.5px; color:var(--mute); margin-top:2px; }
+  .price { margin-top:8px; font-size:15.5px; font-weight:800; color:var(--gold); letter-spacing:-.01em; }
+  .price small { font-size:11.5px; font-weight:650; opacity:.75; margin-left:3px; }
+
+  .skel .tile { background:var(--raise); }
+  .skel .tile::before { display:none; }
+  .skel .bar { height:11px; border-radius:6px; background:var(--raise); margin-top:8px; }
+  .skel .bar.s { width:46%; } .skel .bar.l { width:78%; }
+  .skel { animation:pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity:.55; } }
+
+  .empty { display:none; text-align:center; padding:56px 28px; }
+  .empty h2 { font-size:18px; font-weight:750; margin-bottom:6px; }
+  .empty p { font-size:14px; color:var(--mute); line-height:1.5; }
+
+  /* ---------- tafsilot oynasi ---------- */
+  .shade { position:fixed; inset:0; z-index:40; background:rgba(4,6,10,.62); opacity:0; pointer-events:none; transition:opacity .25s; }
+  .shade.on { opacity:1; pointer-events:auto; }
+  .sheet {
+    position:fixed; left:0; right:0; bottom:0; z-index:41; max-width:520px; margin:0 auto; height:min(94vh, 820px);
+    background:var(--ink); border-radius:28px 28px 0 0; overflow-y:auto; overscroll-behavior:contain;
+    transform:translateY(105%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
+    box-shadow:0 -20px 60px rgba(0,0,0,.45);
+  }
+  .sheet.on { transform:none; }
+  .sheet.drag { transition:none; }
+  .hero { position:relative; padding:18px 20px 22px; background:var(--ink); isolation:isolate; touch-action:pan-y; }
+  /* Backdrop yorug'ligi butun oynani bo'yaydi */
+  .hero::before {
+    content:""; position:absolute; inset:0; z-index:-1;
+    background:radial-gradient(120% 90% at 50% 18%, color-mix(in srgb, var(--bd) 70%, transparent) 0%, color-mix(in srgb, var(--bd) 22%, transparent) 55%, transparent 100%);
+  }
+  .grab { width:40px; height:5px; border-radius:3px; background:rgba(255,255,255,.35); margin:0 auto 14px; }
+  .close {
+    position:absolute; right:14px; top:14px; width:34px; height:34px; border-radius:50%; display:grid; place-items:center;
+    background:var(--glass); color:var(--text); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .close svg { width:16px; height:16px; }
+  .stage { width:min(78%, 320px); aspect-ratio:1/1; margin:6px auto 0; border-radius:26px; position:relative; overflow:hidden;
+           box-shadow:0 26px 60px -18px color-mix(in srgb, var(--bd) 85%, #000), 0 0 0 1px rgba(255,255,255,.08) inset;
+           background:radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--bd) 62%, #fff) 0%, var(--bd) 46%, color-mix(in srgb, var(--bd) 52%, #000) 100%); }
+  .stage::before { content:""; position:absolute; inset:0; opacity:.16; pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='46' viewBox='0 0 46 46'%3E%3Cpath d='M23 9l2.6 8.4L34 20l-8.4 2.6L23 31l-2.6-8.4L12 20l8.4-2.6z' fill='white'/%3E%3C/svg%3E");
+    -webkit-mask-image:radial-gradient(circle at 50% 42%, transparent 30%, #000 85%); mask-image:radial-gradient(circle at 50% 42%, transparent 30%, #000 85%); }
+  .stage img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .4s; }
+  .stage img.on { opacity:1; }
+  .head { text-align:center; margin-top:18px; }
+  .head h2 { font-size:25px; font-weight:800; letter-spacing:-.02em; }
+  .head p { font-size:14px; color:var(--mute); margin-top:3px; }
+
+  .facts { margin:4px 16px 0; border-radius:18px; background:var(--panel); border:1px solid var(--hair); }
+  .fact { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 16px; font-size:14.5px; }
+  .fact + .fact { border-top:1px solid var(--hair); }
+  .fact span { color:var(--mute); }
+  .fact b { font-weight:700; display:flex; align-items:center; gap:8px; text-align:right; }
+  .dot { width:12px; height:12px; border-radius:50%; background:var(--bd); box-shadow:0 0 0 2px rgba(255,255,255,.18); flex:none; }
+  .open { display:block; text-align:center; margin:16px 16px 6px; font-size:14px; color:var(--ice); text-decoration:none; font-weight:600; }
+  .how { margin:6px 24px 0; font-size:13px; line-height:1.5; color:var(--mute); text-align:center; }
+
+  .buy {
+    position:sticky; bottom:0; margin-top:18px; padding:14px 16px calc(14px + var(--safe-b));
+    background:linear-gradient(transparent, var(--ink) 26%); display:flex; align-items:center; gap:14px;
+  }
+  .buy .sum { flex:none; }
+  .buy .sum b { display:block; font-size:21px; font-weight:800; color:var(--gold); letter-spacing:-.015em; line-height:1.1; }
+  .buy .sum small { font-size:12px; color:var(--mute); }
+  .buy .sum small.short { color:var(--bad); font-weight:600; }
+  .go { flex:1; min-height:52px; border-radius:16px; font-size:16.5px; font-weight:800; color:#06121f;
+        background:var(--text); transition:transform .12s, opacity .2s; }
+  body.tg-light .go { color:#fff; }
+  .go:active { transform:scale(.98); }
+  .go.topup { background:var(--ice); color:#06121f; }
+  .go:disabled { opacity:.5; }
+  .err { color:var(--bad); font-size:13px; text-align:center; padding:0 20px; min-height:0; }
+  .err:not(:empty) { margin-top:10px; }
+
+  /* ---------- muvaffaqiyat ---------- */
+  .done { text-align:center; padding:54px 28px 26px; }
+  .done svg { width:84px; height:84px; margin-bottom:18px; }
+  .done circle { fill:none; stroke:var(--ok); stroke-width:4; stroke-dasharray:238; stroke-dashoffset:238; animation:draw .6s .05s ease-out forwards; }
+  .done path { fill:none; stroke:var(--ok); stroke-width:5; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:52; stroke-dashoffset:52; animation:draw .4s .55s ease-out forwards; }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  .done h3 { font-size:22px; font-weight:800; letter-spacing:-.015em; margin-bottom:8px; }
+  .done p { font-size:14.5px; color:var(--mute); line-height:1.55; }
+  .done .ord { display:inline-block; margin-top:16px; padding:8px 14px; border-radius:12px; background:var(--panel); border:1px solid var(--hair); font-weight:700; font-size:14px; }
+  .done .acts { display:grid; gap:10px; margin-top:26px; }
+  .done .acts button { min-height:50px; border-radius:15px; font-weight:750; font-size:16px; }
+  .done .acts .p { background:var(--text); color:var(--ink); }
+  .done .acts .s { background:var(--panel); border:1px solid var(--hair); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+  }
+
+  /* ===== v2 dizayn yangilanishi: yorqin gradient, shisha effekt, silliq animatsiya ===== */
+  body{background:radial-gradient(120% 60% at 50% -10%,rgba(103,180,255,.16),transparent 60%),
+       radial-gradient(80% 40% at 100% 0%,rgba(244,195,95,.10),transparent 55%),var(--ink)}
+  body.tg-light{background:radial-gradient(120% 60% at 50% -10%,rgba(29,127,224,.12),transparent 60%),var(--ink)}
+  h1{background:linear-gradient(90deg,var(--text),var(--ice));-webkit-background-clip:text;background-clip:text;
+     -webkit-text-fill-color:transparent}
+  .wallet{background:linear-gradient(135deg,rgba(103,180,255,.18),rgba(244,195,95,.14));
+     border:1px solid var(--hair);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  .card{border:1px solid var(--hair);box-shadow:0 8px 24px -14px rgba(0,0,0,.6);
+     transition:transform .18s ease,box-shadow .18s ease}
+  .card:active{transform:scale(.97)}
+  @media (hover:hover){.card:hover{transform:translateY(-3px);box-shadow:0 16px 32px -14px rgba(0,0,0,.7)}}
+  .price{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;
+     background:rgba(244,195,95,.14)}
+  .chip{border:1px solid var(--hair);transition:background .15s,transform .15s}
+  .chip:active{transform:scale(.95)}
+  .go{background:linear-gradient(135deg,#4aa3ff,#6a7bff);box-shadow:0 10px 24px -10px rgba(74,163,255,.8);
+     color:#fff;transition:transform .15s,filter .15s}
+  .go:active{transform:scale(.97);filter:brightness(.95)}
+  .sheet{border-top:1px solid var(--hair);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .stage{box-shadow:0 24px 50px -18px rgba(0,0,0,.65)}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .grid .card{animation:rise .4s ease both}
+  .grid .card:nth-child(2n){animation-delay:.05s}.grid .card:nth-child(3n){animation-delay:.1s}
+  @media (prefers-reduced-motion:reduce){.grid .card{animation:none}.card{transition:none}}
+  .uwrap{margin:14px 16px 0}
+  .uwrap label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}
+  .uwrap input{width:100%;padding:14px 15px;border-radius:14px;background:var(--raise);border:1px solid var(--hair);
+     color:var(--text);font:inherit;font-size:16px}
+  .uwrap input:focus{outline:2px solid var(--ice);outline-offset:1px}
+  .uwrap small{display:block;margin-top:6px;font-size:12px;color:var(--mute)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="row">
+      <div>
+        <h1>NFT olish</h1>
+        <p class="tagline">Telegram kolleksiya giftlari</p>
+      </div>
+      <button class="wallet" id="wallet" aria-label="Hisobni to'ldirish">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v10a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2"/><circle cx="16.5" cy="13.5" r="1" fill="currentColor"/></svg>
+        <span id="bal">0 so'm</span>
+        <span class="plus" aria-hidden="true">+</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="gate" id="gate">
+    Sotib olish uchun <b id="gateCh"></b> kanaliga obuna bo'ling.
+    <button id="gateBtn">Kanalni ochish</button>
+  </div>
+
+  <div class="tools">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Nom, model yoki fon bo'yicha qidirish" autocomplete="off" enterkeyhint="search">
+    </label>
+    <div class="chips" id="chips" role="group" aria-label="Kolleksiya"></div>
+    <div class="sorts" role="group" aria-label="Tartib">
+      <button class="sort" data-s="new" aria-pressed="true">Yangi</button>
+      <button class="sort" data-s="asc" aria-pressed="false">Arzonroq</button>
+      <button class="sort" data-s="desc" aria-pressed="false">Qimmatroq</button>
+    </div>
+  </div>
+
+  <main class="grid" id="grid" aria-live="polite"></main>
+  <div class="empty" id="empty"><h2 id="emptyT"></h2><p id="emptyP"></p></div>
+</div>
+
+<div class="shade" id="shade"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="NFT tafsiloti"></section>
+
+<script>
+(function () {
+  "use strict";
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    try { tg.expand(); tg.ready(); } catch (e) {}
+    if (tg.colorScheme === "light") document.body.classList.add("tg-light");
+    try {
+      var c = tg.colorScheme === "light" ? "#f2f4f8" : "#0e1117";
+      tg.setHeaderColor(c); tg.setBackgroundColor(c); tg.setBottomBarColor && tg.setBottomBarColor(c);
+    } catch (e) {}
+  }
+  var headers = { "X-Telegram-Init-Data": (tg && tg.initData) || "", "Content-Type": "application/json" };
+  var $ = function (id) { return document.getElementById(id); };
+  var S = { username: "", items: [], balance: 0, channel: "", busy: false, coll: "", sort: "new", open: null };
+
+  /* ---------- yordamchilar ---------- */
+  function money(n) { return Number(n).toLocaleString("ru-RU"); }
+  function api(path, opts) {
+    return fetch(path, Object.assign({ headers: headers, cache: "no-store" }, opts || {}))
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: "server" }; }); })
+      .catch(function () { return { ok: false, error: "network" }; });
+  }
+  function haptic(kind) { try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(kind); } catch (e) {} }
+  function tick() { try { tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged(); } catch (e) {} }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function priceNode(cls, value) {
+    var p = el("div", cls, money(value)); p.appendChild(el("small", "", "so'm")); return p;
+  }
+
+  /* Backdrop nomi -> rang. Telegram nomlari: "Pure Gold", "Midnight Blue", "Emerald"...
+     Kalit so'z bo'yicha aniqlanadi; noma'lum nom doim bir xil rangga aylanadi. */
+  var BD_RULES = [
+    [/onyx|black|gunmetal|carbon|obsidian/, "#3a3f4a"],
+    [/gold|amber|lemon|honey|sand|ochre/, "#c79a2b"],
+    [/orange|persimmon|copper|tangerine|apricot|rust|chestnut|cappuccino|bronze/, "#cf7a36"],
+    [/red|carmine|coral|tomato|burgundy|ruby|crimson|strawberry|raspberry|rosewood/, "#c2414b"],
+    [/pink|candy|rose|fandango|magenta|mexican/, "#d9609a"],
+    [/purple|violet|lilac|grape|indigo|lavender|plum|amethyst/, "#7b58cf"],
+    [/cyan|aqua|turquoise|teal|mint|pacific/, "#2eb5b0"],
+    [/green|emerald|jade|olive|pine|shamrock|malachite|camo|hunter|khaki|pistachio|lime/, "#2f9a6a"],
+    [/blue|navy|cobalt|azure|ultramarine|sapphire|sky|cerulean/, "#3a74d6"],
+    [/silver|grey|gray|platinum|steel|pearl|ivory|white|moon|stone|ash/, "#8c96a8"],
+    [/brown|seal|chocolate|coffee|mocha|umber/, "#7b5a45"]
+  ];
+  function backdrop(name) {
+    var n = String(name || "").toLowerCase();
+    for (var i = 0; i < BD_RULES.length; i++) if (BD_RULES[i][0].test(n)) return BD_RULES[i][1];
+    var h = 0; for (var k = 0; k < n.length; k++) h = (h * 31 + n.charCodeAt(k)) % 360;
+    return "hsl(" + h + " 42% 42%)";
+  }
+
+  /* Rasm: yuklanguncha NFT'ning o'z backdrop gradienti ko'rinib turadi */
+  function loadImg(box, src, title) {
+    if (!/^https:\/\//i.test(src || "")) return;
+    var im = new Image();
+    im.referrerPolicy = "no-referrer"; im.alt = title || ""; im.decoding = "async";
+    im.onload = function () { box.insertBefore(im, box.firstChild); requestAnimationFrame(function () { im.classList.add("on"); }); };
+    im.src = src;
+  }
+
+  var ERR = {
+    unavailable: "Bu NFT hozirgina band qilindi yoki sotildi. Ro'yxat yangilandi.",
+    no_nft: "NFT topilmadi.",
+    no_price: "Bu NFT uchun narx belgilanmagan.",
+    insufficient_sum: "Hisobingizda mablag' yetarli emas.",
+    subscribe: "Avval majburiy kanalga obuna bo'ling.",
+    auth: "Mini-appni Telegram ichida oching.",
+    bad_username: "Telegram @username noto'g'ri. Masalan: @ali_uz",
+    user_not_found: "Bunday Telegram akkaunt topilmadi. @username ni tekshiring.",
+    network: "Internet bilan aloqa yo'q. Qayta urinib ko'ring.",
+    server: "Serverda xatolik. Birozdan so'ng qayta urinib ko'ring."
+  };
+
+  /* ---------- katalog ---------- */
+  function collections() {
+    var m = {}; S.items.forEach(function (n) { m[n.name] = (m[n.name] || 0) + 1; });
+    return Object.keys(m).sort().map(function (k) { return [k, m[k]]; });
+  }
+  function renderChips() {
+    var box = $("chips"); box.textContent = "";
+    var all = [["", S.items.length]].concat(collections());
+    if (all.length <= 2) { box.style.display = "none"; return; }
+    box.style.display = "";
+    all.forEach(function (c) {
+      var b = el("button", "chip", c[0] || "Hammasi");
+      b.appendChild(el("b", "", String(c[1])));
+      b.setAttribute("aria-pressed", String(S.coll === c[0]));
+      b.onclick = function () { S.coll = c[0]; tick(); render(); };
+      box.appendChild(b);
+    });
+  }
+  function visible() {
+    var q = $("q").value.trim().toLowerCase();
+    var list = S.items.filter(function (n) {
+      if (S.coll && n.name !== S.coll) return false;
+      if (!q) return true;
+      return [n.name, "#" + n.number, n.model, n.backdrop, n.symbol].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    if (S.sort === "asc") list.sort(function (a, b) { return a.price - b.price; });
+    else if (S.sort === "desc") list.sort(function (a, b) { return b.price - a.price; });
+    else list.sort(function (a, b) { return b.id - a.id; });
+    return list;
+  }
+  function render() {
+    renderChips();
+    document.querySelectorAll(".sort").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.s === S.sort)); });
+    var list = visible(), grid = $("grid");
+    grid.textContent = "";
+    var empty = $("empty");
+    empty.style.display = list.length ? "none" : "block";
+    if (!list.length) {
+      var searching = $("q").value.trim() || S.coll;
+      $("emptyT").textContent = searching ? "Hech narsa topilmadi" : "Hozircha NFT yo'q";
+      $("emptyP").textContent = searching ? "Boshqa so'z yozing yoki kolleksiyani «Hammasi» ga qaytaring."
+                                          : "Yangi NFT qo'shilganda shu yerda ko'rinadi.";
+    }
+    list.forEach(function (n) {
+      var c = el("button", "card"); c.type = "button";
+      c.setAttribute("aria-label", n.name + " #" + n.number + ", " + money(n.price) + " so'm");
+      var tile = el("div", "tile"); tile.style.setProperty("--bd", backdrop(n.backdrop));
+      if (n.model) tile.appendChild(el("span", "tag", n.model));
+      loadImg(tile, n.image, n.name);
+      var meta = el("div", "meta");
+      meta.appendChild(el("div", "nm", n.name));
+      meta.appendChild(el("div", "num", "#" + n.number));
+      meta.appendChild(priceNode("price", n.price));
+      c.appendChild(tile); c.appendChild(meta);
+      c.onclick = function () { tick(); openSheet(n); };
+      grid.appendChild(c);
+    });
+    $("bal").textContent = money(S.balance) + " so'm";
+  }
+  function skeleton() {
+    var g = $("grid"); g.textContent = "";
+    for (var i = 0; i < 6; i++) {
+      var c = el("div", "card skel"); c.appendChild(el("div", "tile"));
+      var m = el("div", "meta"); m.appendChild(el("div", "bar l")); m.appendChild(el("div", "bar s")); c.appendChild(m);
+      g.appendChild(c);
+    }
+  }
+
+  /* ---------- tafsilot oynasi ---------- */
+  var sheet = $("sheet");
+  function showSheet() {
+    document.body.classList.add("locked");
+    $("shade").classList.add("on");
+    requestAnimationFrame(function () { sheet.classList.add("on"); });
+    if (tg && tg.BackButton) { try { tg.BackButton.show(); tg.BackButton.onClick(closeSheet); } catch (e) {} }
+  }
+  function closeSheet() {
+    S.open = null;
+    sheet.classList.remove("on"); sheet.style.transform = "";
+    $("shade").classList.remove("on");
+    document.body.classList.remove("locked");
+    if (tg && tg.BackButton) { try { tg.BackButton.hide(); tg.BackButton.offClick(closeSheet); } catch (e) {} }
+  }
+  $("shade").onclick = closeSheet;
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && S.open) closeSheet(); });
+
+  function fact(parent, label, value, bd) {
+    if (!value) return;
+    var r = el("div", "fact"); r.appendChild(el("span", "", label));
+    var b = el("b", ""); if (bd) b.appendChild(el("i", "dot")); b.appendChild(document.createTextNode(value));
+    r.appendChild(b); parent.appendChild(r);
+  }
+
+  function openSheet(n) {
+    S.open = n;
+    sheet.textContent = ""; sheet.scrollTop = 0;
+    var color = backdrop(n.backdrop);
+    sheet.style.setProperty("--bd", color);
+
+    var hero = el("div", "hero");
+    hero.appendChild(el("div", "grab"));
+    var x = el("button", "close"); x.type = "button"; x.setAttribute("aria-label", "Yopish");
+    x.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    x.onclick = closeSheet; hero.appendChild(x);
+    var stage = el("div", "stage"); loadImg(stage, n.image, n.name); hero.appendChild(stage);
+    var head = el("div", "head"); head.appendChild(el("h2", "", n.name)); head.appendChild(el("p", "", "#" + n.number));
+    hero.appendChild(head);
+    sheet.appendChild(hero);
+
+    var facts = el("div", "facts");
+    fact(facts, "Model", n.model);
+    fact(facts, "Fon", n.backdrop, true);
+    fact(facts, "Belgi", n.symbol);
+    if (facts.children.length) sheet.appendChild(facts);
+
+    var a = el("a", "open", "Telegramda ochish"); a.href = n.url; a.target = "_blank"; a.rel = "noopener";
+    a.onclick = function (e) { if (tg && tg.openTelegramLink) { e.preventDefault(); tg.openTelegramLink(n.url); } };
+    sheet.appendChild(a);
+    sheet.appendChild(el("p", "how", "To'lovdan so'ng admin NFT'ni ko'rsatgan akkauntingizga yuboradi. Yetkazilganda botda xabar olasiz."));
+
+    var uw = el("div", "uwrap");
+    uw.appendChild(el("label", "", "NFT qaysi Telegram akkauntga yuborilsin?"));
+    var ui = document.createElement("input"); ui.type = "text"; ui.id = "uname"; ui.placeholder = "@username";
+    ui.autocomplete = "off"; ui.autocapitalize = "off"; ui.spellcheck = false; ui.maxLength = 33;
+    ui.value = S.username ? "@" + S.username.replace(/^@/, "") : "";
+    ui.oninput = function () { S.username = ui.value.replace(/^@/, "").trim(); };
+    uw.appendChild(ui); uw.appendChild(el("small", "", "Akkaunt mavjudligi tekshiriladi. NFT aynan shu akkauntga yuboriladi."));
+    sheet.appendChild(uw);
+    var enough = S.balance + 1e-9 >= n.price;
+    var err = el("div", "err"); err.setAttribute("role", "alert");
+    var bar = el("div", "buy");
+    var sum = el("div", "sum");
+    var pv = el("b", "", money(n.price) + " so'm");
+    var hint = el("small", enough ? "" : "short", enough ? "Hisobingizda " + money(S.balance) + " so'm" : "Yana " + money(n.price - S.balance) + " so'm kerak");
+    sum.appendChild(pv); sum.appendChild(hint);
+    var go = el("button", "go" + (enough ? "" : " topup"), enough ? "Sotib olish" : "Hisobni to'ldirish"); go.type = "button";
+    go.onclick = function () {
+      if (!enough) { location.href = "/app?tab=topup"; return; }
+      confirmBuy(n, go, err);
+    };
+    bar.appendChild(sum); bar.appendChild(go);
+    sheet.appendChild(err); sheet.appendChild(bar);
+    showSheet();
+  }
+
+  /* pastga tortib yopish */
+  (function () {
+    var y0 = null, dy = 0;
+    sheet.addEventListener("touchstart", function (e) {
+      if (sheet.scrollTop > 0 || !e.target.closest(".hero")) { y0 = null; return; }
+      y0 = e.touches[0].clientY; dy = 0;
+    }, { passive: true });
+    sheet.addEventListener("touchmove", function (e) {
+      if (y0 === null) return;
+      dy = Math.max(0, e.touches[0].clientY - y0);
+      sheet.classList.add("drag"); sheet.style.transform = "translateY(" + dy + "px)";
+    }, { passive: true });
+    sheet.addEventListener("touchend", function () {
+      if (y0 === null) return;
+      sheet.classList.remove("drag");
+      if (dy > 110) closeSheet(); else sheet.style.transform = "";
+      y0 = null; dy = 0;
+    });
+  })();
+
+  /* ---------- sotib olish ---------- */
+  function confirmBuy(n, btn, err) {
+    var u = (S.username || "").replace(/^@/, "").trim();
+    if (!/^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(u)) { err.textContent = ERR.bad_username; haptic("error"); return; }
+    err.textContent = "";
+    var text = n.name + " #" + n.number + " — " + money(n.price) + " so'm. @" + u + " akkauntiga yuboriladi. Hisobingizdan yechiladi. Davom etasizmi?";
+    if (tg && tg.showConfirm) tg.showConfirm(text, function (ok) { if (ok) doBuy(n, btn, err); });
+    else if (window.confirm(text)) doBuy(n, btn, err);
+  }
+  function doBuy(n, btn, err) {
+    if (S.busy) return;
+    S.busy = true; btn.disabled = true; err.textContent = "";
+    var label = btn.textContent; btn.textContent = "Yuborilmoqda...";
+    api("/api/nft/buy", { method: "POST", body: JSON.stringify({ nft_id: n.id, username: S.username.replace(/^@/, "").trim() }) }).then(function (r) {
+      S.busy = false;
+      if (r && r.ok) { haptic("success"); S.balance = r.balance_sum; S.items = S.items.filter(function (x) { return x.id !== n.id; }); showDone(n, r.order_id, r.username || S.username); render(); return; }
+      haptic("error");
+      btn.disabled = false; btn.textContent = label;
+      if (r && r.balance_sum !== undefined) S.balance = r.balance_sum;
+      err.textContent = ERR[r && r.error] || "Xatolik yuz berdi. Qayta urinib ko'ring.";
+      if (r && r.error === "unavailable") { closeAfterReload(); }
+    });
+  }
+  function closeAfterReload() { setTimeout(function () { closeSheet(); load(true); }, 1600); }
+
+  function showDone(n, orderId, uname) {
+    sheet.textContent = ""; sheet.scrollTop = 0;
+    var d = el("div", "done");
+    d.innerHTML = '<svg viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="38"/><path d="M26 43l11 11 21-23"/></svg>';
+    d.appendChild(el("h3", "", "Buyurtma qabul qilindi"));
+    d.appendChild(el("p", "", n.name + " #" + n.number + " tez orada @" + String(uname || "").replace(/^@/, "") + " akkauntiga yuboriladi. Admin tasdiqlaganda botda xabar olasiz."));
+    d.appendChild(el("span", "ord", "Buyurtma №" + orderId));
+    var acts = el("div", "acts");
+    var more = el("button", "p", "Yana NFT ko'rish"); more.type = "button"; more.onclick = closeSheet;
+    var back = el("button", "s", "Botga qaytish"); back.type = "button";
+    back.onclick = function () { if (tg && tg.close) tg.close(); else closeSheet(); };
+    acts.appendChild(more); acts.appendChild(back); d.appendChild(acts);
+    sheet.appendChild(d);
+  }
+
+  /* ---------- yuklash ---------- */
+  function load(silent) {
+    if (!silent) skeleton();
+    return api("/api/nft/list").then(function (r) {
+      if (!r || !r.ok) {
+        $("grid").textContent = "";
+        $("empty").style.display = "block";
+        $("emptyT").textContent = "Yuklab bo'lmadi";
+        $("emptyP").textContent = ERR[r && r.error] || ERR.server;
+        return;
+      }
+      S.items = r.items || []; S.balance = r.balance_sum || 0; S.channel = r.channel || ""; if (!S.username) S.username = r.username || "";
+      var gate = $("gate");
+      if (r.need_sub && S.channel) { gate.style.display = "block"; $("gateCh").textContent = "@" + S.channel; }
+      else gate.style.display = "none";
+      render();
+    });
+  }
+
+  $("gateBtn").onclick = function () {
+    var u = "https://t.me/" + S.channel;
+    if (tg && tg.openTelegramLink) tg.openTelegramLink(u); else window.open(u, "_blank");
+  };
+  $("wallet").onclick = function () { location.href = "/app?tab=topup"; };
+  $("q").addEventListener("input", render);
+  document.querySelectorAll(".sort").forEach(function (b) { b.onclick = function () { S.sort = b.dataset.s; tick(); render(); }; });
+  load();
+})();
+</script>
+</body>
+</html>

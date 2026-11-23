@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>⭐ Stars Sotib Olish</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --card2: #222632;
+    --line: rgba(255,255,255,.08);
+    --text: #f2f4f8;
+    --muted: #8b93a1;
+    --accent: #2ea6ff;
+    --accent2: #7f5cff;
+    --green: #22c55e;
+    --red: #ef4444;
+    --gold: #ffcc5c;
+    --radius: 18px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 18px 16px 120px;
+    transition: background .3s;
+  }
+  .tg-dark { }
+  .tg-light {
+    --bg:#f2f4f8; --card:#ffffff; --card2:#e9edf4; --line:rgba(0,0,0,.07);
+    --text:#0f172a; --muted:#5b6472;
+  }
+
+  /* ===== HEADER ===== */
+  .header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
+  .brand { display:flex; align-items:center; gap:10px; }
+  .brand .logo {
+    width:44px; height:44px; border-radius:14px; display:flex; align-items:center;
+    justify-content:center; font-size:24px;
+    background:linear-gradient(135deg, var(--accent2), var(--accent));
+    box-shadow:0 8px 20px rgba(127,92,255,.35);
+  }
+  .brand h1 { font-size:17px; font-weight:700; line-height:1.2; }
+  .brand p { font-size:12px; color:var(--muted); }
+  .balance-pill {
+    display:flex; flex-direction:column; align-items:flex-end; gap:2px;
+    background:var(--card); border:1px solid var(--line); padding:8px 12px; border-radius:14px;
+  }
+  .balance-pill small { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .balance-pill b { font-size:14px; }
+  .balance-pill b.stars { color: var(--gold); }
+
+  /* ===== HERO ===== */
+  .hero {
+    position:relative; overflow:hidden; border-radius:var(--radius);
+    padding:22px 18px; margin-bottom:22px;
+    background:linear-gradient(135deg, rgba(127,92,255,.28), rgba(46,166,255,.18)), var(--card);
+    border:1px solid var(--line);
+  }
+  .hero::after {
+    content:"⭐"; position:absolute; right:-14px; top:-18px; font-size:110px;
+    opacity:.12; transform:rotate(15deg);
+  }
+  .hero h2 { font-size:22px; font-weight:800; margin-bottom:4px; }
+  .hero p { font-size:13px; color:var(--muted); }
+
+  /* ===== PRICE TAG ===== */
+  .price-strip {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:14px 16px; margin-bottom:22px;
+  }
+  .price-strip .lbl { font-size:12px; color:var(--muted); }
+  .price-strip .val { font-size:18px; font-weight:800; }
+
+  /* ===== PACKAGES ===== */
+  .section-title {
+    font-size:13px; font-weight:700; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.6px; margin:0 0 12px 4px;
+  }
+  .grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; margin-bottom:24px; }
+  .pkg {
+    background:var(--card); border:1.5px solid var(--line); border-radius:16px;
+    padding:16px 14px; cursor:pointer; transition:all .18s ease; position:relative;
+    user-select:none;
+  }
+  .pkg:active { transform:scale(.97); }
+  .pkg .star { font-size:26px; display:block; margin-bottom:8px; }
+  .pkg .amt { font-size:20px; font-weight:800; }
+  .pkg .amt small { font-size:12px; color:var(--muted); font-weight:500; }
+  .pkg .price { font-size:13px; color:var(--muted); margin-top:4px; font-weight:600; }
+  .pkg .badge {
+    position:absolute; top:-8px; right:10px; font-size:10px; font-weight:800;
+    background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; padding:3px 8px; border-radius:20px;
+  }
+  .pkg.selected {
+    border-color:var(--accent); background:linear-gradient(160deg, rgba(46,166,255,.16), var(--card));
+    box-shadow:0 6px 18px rgba(46,166,255,.22);
+  }
+  .pkg.selected .amt { color: var(--accent); }
+
+  /* ===== CUSTOM AMOUNT ===== */
+  .custom { margin-bottom:24px; }
+  .custom input {
+    width:100%; background:var(--card); border:1.5px solid var(--line); border-radius:16px;
+    color:var(--text); font-size:18px; font-weight:600; padding:14px 16px; outline:none;
+  }
+  .custom input:focus { border-color:var(--accent); }
+  .custom .hint { font-size:12px; color:var(--muted); margin:8px 4px 0; }
+
+  /* ===== USERNAME ===== */
+  .username { margin-bottom:24px; }
+  .username .wrap { display:flex; align-items:center; background:var(--card); border:1.5px solid var(--line); border-radius:16px; overflow:hidden; }
+  .username .wrap:focus-within { border-color:var(--accent); }
+  .username .at {
+    padding:14px 0 14px 16px; font-size:20px; font-weight:800; color:var(--muted);
+  }
+  .username input {
+    flex:1; background:transparent; border:none; outline:none; color:var(--text);
+    font-size:16px; font-weight:600; padding:14px 16px 14px 8px; width:100%;
+  }
+  .username input::placeholder { color:var(--muted); font-weight:500; }
+  .username .hint { font-size:12px; color:var(--muted); margin:8px 4px 0; }
+
+  /* ===== SUMMARY + BUY ===== */
+  .summary {
+    background:var(--card2); border:1px solid var(--line); border-radius:16px;
+    padding:14px 16px; margin-bottom:16px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .summary .row { font-size:14px; }
+  .summary .row .v { float:right; font-weight:700; margin-left:24px; }
+  .summary .row.total { font-size:17px; font-weight:800; margin-top:8px; }
+  .btn {
+    width:100%; border:none; border-radius:16px; padding:16px; font-size:17px; font-weight:800;
+    color:#fff; cursor:pointer; transition:all .18s ease;
+    background:linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow:0 8px 22px rgba(46,166,255,.3);
+  }
+  .btn:active { transform:scale(.98); }
+  .btn:disabled { background:var(--card2); color:var(--muted); box-shadow:none; cursor:not-allowed; }
+  .btn .sub { display:block; font-size:12px; font-weight:500; opacity:.85; margin-top:2px; }
+
+  /* ===== TOAST ===== */
+  .toast-wrap { position:fixed; left:16px; right:16px; bottom:100px; z-index:50; display:flex; flex-direction:column; gap:10px; }
+  .toast {
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:14px 16px; box-shadow:0 12px 30px rgba(0,0,0,.35);
+    animation:slidein .25s ease; display:flex; align-items:center; gap:12px;
+  }
+  .toast .ic { font-size:22px; }
+  .toast .msg { font-size:13.5px; line-height:1.4; }
+  .toast .msg b { font-size:15px; display:block; margin-bottom:2px; }
+  @keyframes slidein { from { transform:translateY(24px); opacity:0; } to { transform:none; opacity:1; } }
+
+  /* ===== FIXED FOOTER ===== */
+  .footer {
+    position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(transparent, var(--bg) 30%); z-index:10;
+  }
+  .footer .wrap { max-width:480px; margin:0 auto; }
+
+  /* ===== LOADING ===== */
+  .loader {
+    position:fixed; inset:0; background:var(--bg); z-index:100;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+  }
+  .loader .spin {
+    width:38px; height:38px; border-radius:50%;
+    border:3px solid var(--line); border-top-color:var(--accent);
+    animation:spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loader p { font-size:13px; color:var(--muted); }
+
+  /* ===== TABS ===== */
+  .tabs { display:flex; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:5px; margin-bottom:18px; }
+  .tab { flex:1; border:none; background:transparent; color:var(--muted); font-size:14px; font-weight:700; padding:11px 8px; border-radius:12px; cursor:pointer; transition:all .18s; }
+  .tab.active { background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#fff; box-shadow:0 6px 16px rgba(46,166,255,.28); }
+  .subbanner { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.4); border-radius:16px; padding:14px 16px; margin-bottom:16px; font-size:13.5px; line-height:1.45; }
+  .subbanner .btn { margin-top:10px; padding:12px; font-size:15px; }
+
+  /* ===== TOPUP ===== */
+  .chips { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:14px; }
+  .chip { background:var(--card); border:1.5px solid var(--line); border-radius:14px; padding:14px 10px; text-align:center; font-weight:800; font-size:16px; cursor:pointer; user-select:none; transition:all .15s; }
+  .chip small { display:block; color:var(--muted); font-weight:500; font-size:11px; margin-top:2px; }
+  .chip:active { transform:scale(.97); }
+  .chip.selected { border-color:var(--accent); background:linear-gradient(160deg, rgba(46,166,255,.16), var(--card)); color:var(--accent); }
+  .field { width:100%; background:var(--card); border:1.5px solid var(--line); border-radius:16px; color:var(--text); font-size:17px; font-weight:600; padding:14px 16px; outline:none; margin-bottom:8px; }
+  .field:focus { border-color:var(--accent); }
+  .hint { font-size:12px; color:var(--muted); margin:6px 4px 14px; line-height:1.4; }
+  .paybox { background:linear-gradient(135deg, rgba(127,92,255,.22), rgba(46,166,255,.14)), var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px 16px; margin-bottom:14px; }
+  .paybox .row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); }
+  .paybox .row:last-child { border-bottom:none; }
+  .paybox .lbl { font-size:12px; color:var(--muted); margin-bottom:3px; }
+  .paybox .val { font-size:19px; font-weight:800; letter-spacing:.4px; word-break:break-all; }
+  .paybox .val.card { font-size:20px; letter-spacing:1.2px; }
+  .copy { border:1px solid var(--line); background:var(--card2); color:var(--text); border-radius:12px; padding:9px 12px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .warn { background:rgba(255,204,92,.12); border:1px solid rgba(255,204,92,.4); border-radius:14px; padding:12px 14px; font-size:13px; line-height:1.45; margin-bottom:14px; }
+  .btn.secondary { background:var(--card2); color:var(--text); box-shadow:none; margin-top:10px; font-size:15px; padding:13px; }
+  .state { text-align:center; padding:26px 10px; }
+  .state .big { font-size:54px; margin-bottom:10px; }
+  .state h3 { font-size:19px; margin-bottom:6px; }
+  .state p { font-size:13.5px; color:var(--muted); line-height:1.5; }
+  .spin2 { width:46px; height:46px; margin:0 auto 14px; border-radius:50%; border:4px solid var(--line); border-top-color:var(--accent); animation:spin .9s linear infinite; }
+</style>
+</head>
+<body>
+
+<div class="loader" id="loader"><div class="spin"></div><p>Yuklanmoqda...</p></div>
+
+<header class="header">
+  <div class="brand">
+    <div class="logo">⭐</div>
+    <div>
+      <h1>Stars Sotib Olish</h1>
+      <p id="userLabel">Telegram</p>
+    </div>
+  </div>
+  <div class="balance-pill">
+    <small>Hisobingiz</small>
+    <b id="balSum">0 so'm</b>
+    <b class="stars" id="balStars">0 ⭐</b>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" id="tabBtnBuy" data-tab="buy">⭐ Stars olish</button>
+  <button class="tab" id="tabBtnTopup" data-tab="topup">💳 Hisob to'ldirish</button>
+</div>
+
+<div class="subbanner" id="subBanner" style="display:none">
+  📢 <b>Majburiy obuna:</b> botdan foydalanish uchun <b id="subChannel"></b> kanaliga obuna bo'ling.
+  <button class="btn" id="subOpen">📢 Kanalga o'tish</button>
+  <button class="btn secondary" id="subCheck">✅ Tekshirish</button>
+</div>
+
+<div id="tabBuy">
+<div class="hero">
+  <h2>Telegram Stars</h2>
+  <p id="heroText">Dastlabki narx yuklanmoqda...</p>
+</div>
+
+<div class="price-strip">
+  <div>
+    <div class="lbl">1 ⭐ narxi</div>
+    <div class="val" id="starPrice">—</div>
+  </div>
+  <div style="text-align:right">
+    <div class="lbl">Minimal buyurtma</div>
+    <div class="val" id="minStars">50</div>
+  </div>
+</div>
+
+<div class="section-title">Paketlar</div>
+<div class="grid" id="pkgGrid"></div>
+
+<div class="custom">
+  <div class="section-title" style="margin-bottom:10px">Boshqa miqdor</div>
+  <input id="customAmt" type="number" inputmode="numeric" min="50" step="1" placeholder="Masalan: 250">
+  <div class="hint">⚠️ Minimal buyurtma 50 ⭐. Miqdorni o'zingiz kiriting.</div>
+</div>
+
+<div class="username">
+  <div class="section-title" style="margin-bottom:10px">Stars qayerga yuboriladi</div>
+  <div class="wrap">
+    <span class="at">@</span>
+    <input id="userName" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="username">
+  </div>
+  <div class="hint">⭐ Telegram username'ingizni kiriting — stars shu hisobga yuboriladi.</div>
+</div>
+
+<div class="summary">
+  <div style="width:100%">
+    <div class="row">Stars <span class="v"><span id="sumAmt">0</span> ⭐</span></div>
+    <div class="row">1 ⭐ narxi <span class="v"><span id="sumRate">0</span> so'm</span></div>
+    <div class="row total">Jami <span class="v" id="sumPrice">0 so'm</span></div>
+  </div>
+</div>
+
+</div><!-- /tabBuy -->
+
+<div id="tabTopup" style="display:none">
+  <!-- 1-qadam: summa -->
+  <div id="tuStep1">
+    <div class="hero">
+      <h2>💳 Hisobni to'ldirish</h2>
+      <p>Summani tanlang, to'lang va tranzaksiya ID sini yozing — bot o'zi tekshirib hisobingizga qo'shadi.</p>
+    </div>
+    <div class="section-title">Summani tanlang</div>
+    <div class="chips" id="tuChips"></div>
+    <input class="field" id="tuAmount" type="text" inputmode="numeric" placeholder="Boshqa summa (so'm)">
+    <div class="hint" id="tuRange"></div>
+    <button class="btn" id="tuNext" disabled>Davom etish <span class="sub" id="tuNextSub">Summani tanlang</span></button>
+  </div>
+
+  <!-- 2-qadam: rekvizitlar + ID -->
+  <div id="tuStep2" style="display:none">
+    <div class="section-title">To'lov ma'lumotlari</div>
+    <div class="paybox">
+      <div class="row"><div><div class="lbl">To'lanadigan summa</div><div class="val" id="payAmount">—</div></div><button class="copy" data-copy="amount">📋 Nusxa</button></div>
+      <div class="row"><div><div class="lbl">Karta raqami</div><div class="val card" id="payCard">—</div></div><button class="copy" data-copy="card">📋 Nusxa</button></div>
+      <div class="row"><div><div class="lbl">Karta egasi</div><div class="val" id="payHolder" style="font-size:16px">—</div></div></div>
+    </div>
+    <div class="warn">⚠️ <b>Aynan shu summani</b> o'tkazing. Summa farq qilsa to'lov avtomatik bekor bo'ladi.</div>
+    <div class="section-title">Tranzaksiya ID</div>
+    <input class="field" id="tuTx" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Masalan: 4821937465">
+    <div class="hint">To'lagach bank ilovasidagi chekdan «ID / Ref / Chek raqami» ni nusxalab shu yerga qo'ying.</div>
+    <button class="btn" id="tuSubmit" disabled>✅ To'ladim, tekshirish</button>
+    <button class="btn secondary" id="tuBack">← Summani o'zgartirish</button>
+  </div>
+
+  <!-- 3-qadam: natija -->
+  <div id="tuStep3" style="display:none">
+    <div class="state" id="tuState"></div>
+    <button class="btn" id="tuDone" style="display:none"></button>
+    <button class="btn secondary" id="tuAgain" style="display:none">🔁 Qayta urinish</button>
+  </div>
+</div>
+
+<div class="footer" id="buyFooter"><div class="wrap">
+  <button class="btn" id="buyBtn" disabled>
+    🚀 Sotib olish
+    <span class="sub" id="buySub">Paket tanlang</span>
+  </button>
+</div></div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    tg.expand();
+    tg.ready();
+    tg.setHeaderColor("#0f1115");
+    tg.setBackgroundColor("#0f1115");
+    if (tg.colorScheme === "light") document.body.classList.add("tg-light");
+    try { tg.setBottomBarColor("#0f1115"); } catch (e) {}
+  }
+
+  var initData = (tg && tg.initData) || "";
+  var headers = {
+    "X-Telegram-Init-Data": initData,
+    "Content-Type": "application/json",
+  };
+  var userInput = document.getElementById("userName");
+  var state = {
+    starPrice: 0, minStars: 50, balanceSum: 0, balanceStars: 0,
+    selected: 0, packages: [],
+  };
+  var fmtN = function (n) { return Number(n).toLocaleString("ru-RU"); };
+  var fmtP = function (n) { return fmtN(n) + " so'm"; };
+
+  // ---------- API ----------
+  function api(path, opts) {
+    opts = opts || {};
+    return fetch(path, Object.assign({ headers: headers }, opts)).then(function (r) {
+      return r.json().catch(function () { return { ok: false }; });
+    });
+  }
+
+  function toast(icon, title, msg) {
+    var w = document.getElementById("toasts");
+    var el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = '<div class="ic">' + icon + '</div><div class="msg"><b></b></div>';
+    el.querySelector("b").textContent = title;
+    if (msg) el.querySelector(".msg").appendChild(document.createTextNode(" " + msg));
+    w.appendChild(el);
+    setTimeout(function () { el.style.opacity = "0"; el.style.transition = "opacity .3s"; setTimeout(function(){ el.remove(); }, 350); }, 3800);
+  }
+
+  // ---------- Render ----------
+  function renderPkgs() {
+    var grid = document.getElementById("pkgGrid");
+    grid.innerHTML = "";
+    state.packages.forEach(function (p) {
+      var d = document.createElement("div");
+      d.className = "pkg";
+      if (p.badge) d.innerHTML = '<span class="badge">' + p.badge + "</span>";
+      d.innerHTML += '<span class="star">⭐</span><div class="amt">' + fmtN(p.amount) + "<small> Stars</small></div>" +
+        '<div class="price">' + fmtP(p.price) + "</div>";
+      d.onclick = function () { selectPkg(p.amount); };
+      grid.appendChild(d);
+    });
+  }
+
+  function selectPkg(amt) {
+    state.selected = amt;
+    Array.prototype.forEach.call(document.querySelectorAll(".pkg"), function (el, i) {
+      el.classList.toggle("selected", Number(el.querySelector(".amt").textContent.replace(/[^\d]/g, "")) === amt);
+    });
+    var inp = document.getElementById("customAmt");
+    if (String(inp.value).trim() !== "") inp.value = "";
+    updateSummary();
+  }
+
+  function updateSummary() {
+    var amt = state.selected;
+    var price = amt * state.starPrice;
+    var uname = userInput.value.trim().replace(/^@/, "");
+    document.getElementById("sumAmt").textContent = fmtN(amt);
+    document.getElementById("sumRate").textContent = fmtN(state.starPrice);
+    document.getElementById("sumPrice").textContent = fmtP(price);
+    var btn = document.getElementById("buyBtn");
+    var sub = document.getElementById("buySub");
+    if (!uname) {
+      btn.disabled = true;
+      sub.textContent = "Username kiriting";
+    } else if (amt >= state.minStars) {
+      btn.disabled = (price > state.balanceSum);
+      sub.textContent = btn.disabled
+        ? "Hisobingizda mablag' yetarli emas"
+        : "Balansdan " + fmtP(price) + " yechiladi";
+    } else {
+      btn.disabled = true;
+      sub.textContent = amt === 0 ? "Paket tanlang" : "Minimal " + state.minStars + " ⭐";
+    }
+  }
+
+  // ---------- Load ----------
+  function load() {
+    api("/api/me").then(function (d) {
+      if (!d.ok) { showError("Iltimos, bot orqali oching yoki qayta yuklang"); return; }
+      state.starPrice = d.star_price || 0;
+      state.minStars = d.min_stars || 50;
+      state.balanceSum = d.balance_sum || 0;
+      state.balanceStars = d.balance_stars || 0;
+      document.getElementById("starPrice").textContent = state.starPrice ? fmtP(state.starPrice) : "—";
+      document.getElementById("minStars").textContent = fmtN(state.minStars);
+      document.getElementById("balSum").textContent = fmtP(state.balanceSum);
+      document.getElementById("balStars").textContent = fmtN(state.balanceStars) + " ⭐";
+      if (d.first_name) document.getElementById("userLabel").textContent = d.first_name;
+      if (d.username) userInput.value = d.username;
+      if (!state.starPrice) { showError("Narx hozircha sozlanmagan. Admin bilan bog'laning"); }
+    }).then(function () {
+      return api("/api/buy/prices");
+    }).then(function (d) {
+      if (!d.ok) return;
+      state.packages = Object.keys(d.packages || {}).map(function (k) {
+        var amt = Number(k);
+        var badge = null;
+        if (amt === d.min_stars) badge = "BOSHLANG'ICH";
+        else if (amt === d.min_stars * 10) badge = "OMMABOP";
+        else if (amt === d.min_stars * 5) badge = "YAXSHI NARX";
+        return { amount: amt, price: Number(d.packages[k]), badge: badge };
+      }).filter(function (p) { return p.price > 0; });
+      renderPkgs();
+      selectPkg(state.minStars);
+      hideLoader();
+    }).catch(function () { showError("Server bilan ulanishda xatolik"); });
+  }
+
+  function showError(msg) {
+    hideLoader();
+    document.getElementById("heroText").textContent = msg;
+    document.getElementById("starPrice").textContent = "—";
+    toast("⚠️", "Xatolik", msg);
+  }
+  function hideLoader() { document.getElementById("loader").style.display = "none"; }
+
+  // ---------- Buy ----------
+  function buy() {
+    if (!state.selected || state.selected < state.minStars) return;
+    var btn = document.getElementById("buyBtn");
+    var prev = btn.textContent;
+    btn.textContent = "⏳ Yuborilmoqda...";
+    btn.disabled = true;
+    api("/api/buy", { method: "POST", body: JSON.stringify({ stars: state.selected, username: userInput.value.trim() }) })
+      .then(function (d) {
+        if (d.ok) {
+          state.balanceSum = d.balance_sum;
+          state.balanceStars = d.balance_stars;
+          document.getElementById("balSum").textContent = fmtP(state.balanceSum);
+          document.getElementById("balStars").textContent = fmtN(state.balanceStars) + " ⭐";
+          toast("✅", "Muvaffaqiyatli!", "Buyurtma №" + d.order_id + " — " + fmtN(d.stars) + " ⭐ @" + (d.username || "") + " hisobiga yuborildi.");
+          if (tg) tg.HapticFeedback && tg.HapticFeedback.notificationOccurred("success");
+        } else {
+          var msg = { auth: "Avtorizatsiya xatosi", no_price: "Narx sozlanmagan", min_stars: "Minimal " + (d.min_stars || 50) + " ⭐", insufficient: "Mablag' yetarli emas", too_much: "Juda ko'p", need_username: "Username kiriting", subscribe: "Avval kanalga obuna bo'ling" }[d.error];
+          toast("❌", "Xatolik", msg || d.error || "Qayta urinib ko'ring");
+          if (tg) tg.HapticFeedback && tg.HapticFeedback.notificationOccurred("error");
+          load();
+        }
+      })
+      .catch(function () { toast("❌", "Xatolik", "Server bilan aloqa uzildi"); })
+      .then(function () { btn.textContent = prev; btn.disabled = false; updateSummary(); });
+  }
+
+  // ---------- Events ----------
+  document.getElementById("buyBtn").onclick = buy;
+  document.getElementById("customAmt").addEventListener("input", function () {
+    var v = parseInt(this.value, 10);
+    Array.prototype.forEach.call(document.querySelectorAll(".pkg"), function (el) {
+      el.classList.remove("selected");
+    });
+    state.selected = v > 0 ? v : 0;
+    updateSummary();
+  });
+  userInput.addEventListener("input", function () {
+    this.value = this.value.replace(/[^a-zA-Z0-9_]/g, "");
+    updateSummary();
+  });
+
+  load();
+})();
+</script>
+
+<script>
+(function () {
+  "use strict";
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var headers = { "X-Telegram-Init-Data": (tg && tg.initData) || "", "Content-Type": "application/json" };
+  var $ = function (id) { return document.getElementById(id); };
+  var fmtN = function (n) { return Number(n).toLocaleString("ru-RU"); };
+  var T = { info: null, amount: 0, pollTimer: null, loaded: false };
+
+  function api(path, opts) {
+    return fetch(path, Object.assign({ headers: headers }, opts || {}))
+      .then(function (r) { return r.json().catch(function () { return { ok: false }; }); });
+  }
+  function haptic(kind) { try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(kind); } catch (e) {} }
+
+  // ---------- tablar ----------
+  function showTab(name) {
+    var topup = name === "topup";
+    $("tabBuy").style.display = topup ? "none" : "";
+    $("buyFooter").style.display = topup ? "none" : "";
+    $("tabTopup").style.display = topup ? "" : "none";
+    $("tabBtnBuy").classList.toggle("active", !topup);
+    $("tabBtnTopup").classList.toggle("active", topup);
+    if (topup && !T.loaded) loadTopup();
+  }
+  $("tabBtnBuy").onclick = function () { showTab("buy"); };
+  $("tabBtnTopup").onclick = function () { showTab("topup"); };
+
+  // ---------- majburiy obuna ----------
+  function checkSub() {
+    api("/api/me").then(function (d) {
+      var need = d && d.ok && d.need_sub;
+      $("subBanner").style.display = need ? "" : "none";
+      if (need) {
+        $("subChannel").textContent = d.channel ? "@" + d.channel : "";
+        $("subOpen").onclick = function () {
+          var url = "https://t.me/" + d.channel;
+          if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, "_blank");
+        };
+      }
+    });
+  }
+  $("subCheck").onclick = function () { checkSub(); };
+
+  // ---------- 1-qadam: summa ----------
+  function step(n) {
+    ["tuStep1", "tuStep2", "tuStep3"].forEach(function (id, i) { $(id).style.display = (i + 1 === n) ? "" : "none"; });
+    window.scrollTo(0, 0);
+  }
+  function setAmount(v) {
+    T.amount = v > 0 ? v : 0;
+    var i = T.info, ok = i && T.amount >= i.min && T.amount <= i.max;
+    $("tuNext").disabled = !ok;
+    $("tuNextSub").textContent = ok ? fmtN(T.amount) + " so'm" : (T.amount ? "Summa " + fmtN(i.min) + " – " + fmtN(i.max) + " oralig'ida bo'lsin" : "Summani tanlang");
+    Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (c) {
+      c.classList.toggle("selected", Number(c.dataset.v) === T.amount);
+    });
+  }
+  function loadTopup() {
+    api("/api/topup/info").then(function (d) {
+      if (!d.ok) { return; }
+      T.info = d; T.loaded = true;
+      $("tuRange").textContent = "Minimal " + fmtN(d.min) + " so'm · Maksimal " + fmtN(d.max) + " so'm";
+      var box = $("tuChips"); box.innerHTML = "";
+      d.presets.forEach(function (v) {
+        var c = document.createElement("div");
+        c.className = "chip"; c.dataset.v = v;
+        c.innerHTML = fmtN(v) + "<small>so'm</small>";
+        c.onclick = function () { $("tuAmount").value = ""; setAmount(v); };
+        box.appendChild(c);
+      });
+      setAmount(0);
+    });
+  }
+  $("tuAmount").addEventListener("input", function () {
+    var v = parseInt(this.value.replace(/\D/g, ""), 10) || 0;
+    this.value = v ? fmtN(v) : "";
+    setAmount(v);
+  });
+  $("tuNext").onclick = function () {
+    var i = T.info;
+    if (!i.card) { toastMsg("⚠️ To'lov kartasi sozlanmagan. Admin bilan bog'laning."); return; }
+    $("payAmount").textContent = fmtN(T.amount) + " so'm";
+    $("payCard").textContent = i.card.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
+    $("payHolder").textContent = i.holder || "—";
+    $("tuTx").value = ""; $("tuSubmit").disabled = true;
+    step(2);
+  };
+  $("tuBack").onclick = function () { step(1); };
+
+  // ---------- nusxa ----------
+  function copy(text) {
+    var done = function () { haptic("success"); toastMsg("📋 Nusxalandi"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand("copy"); done(); } catch (e) {} ta.remove();
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy"), function (b) {
+    b.onclick = function () {
+      copy(b.dataset.copy === "amount" ? String(T.amount) : T.info.card.replace(/\s+/g, ""));
+    };
+  });
+  function toastMsg(m) {
+    var w = $("toasts"), el = document.createElement("div");
+    el.className = "toast"; el.innerHTML = '<div class="msg"></div>'; el.firstChild.textContent = m;
+    w.appendChild(el); setTimeout(function () { el.remove(); }, 2600);
+  }
+
+  // ---------- 2-qadam: ID ----------
+  $("tuTx").addEventListener("input", function () {
+    var v = this.value.replace(/[^A-Za-z0-9\-_ ]/g, "");
+    if (v !== this.value) this.value = v;
+    var n = v.replace(/[^A-Za-z0-9]/g, "");
+    $("tuSubmit").disabled = !(n.length >= 6 && /\d/.test(n));
+  });
+
+  var REASONS = {
+    bad_tx: "ID noto'g'ri: kamida 6 ta belgi, raqam qatnashsin.",
+    amount_range: "Summa ruxsat etilgan oraliqda emas.",
+    amount_mismatch: "To'langan summa tanlangan summaga teng emas. Qayta urinib ko'ring yoki adminga yozing.",
+    tx_already_used: "Bu tranzaksiya avval ishlatilgan.",
+    not_found_timeout: "Bu ID bilan to'lov topilmadi. ID va summani tekshirib qayta urinib ko'ring. Pul o'tgan bo'lsa adminga yozing.",
+    duplicate: "Bu ID bilan so'rov allaqachon yuborilgan.",
+    too_many_pending: "Tekshiruvda turgan to'lovlaringiz ko'p. Natijani kuting.",
+    rate_limit: "Juda ko'p urinish. Bir soatdan keyin qayta urinib ko'ring.",
+    no_card: "To'lov kartasi sozlanmagan. Admin bilan bog'laning.",
+    subscribe: "Avval kanalga obuna bo'ling.",
+    manual_review: "So'rov adminga yuborildi."
+  };
+
+  function showState(icon, title, text, spin) {
+    $("tuState").innerHTML = (spin ? '<div class="spin2"></div>' : '<div class="big">' + icon + '</div>') +
+      "<h3></h3><p></p>";
+    $("tuState").querySelector("h3").textContent = title;
+    $("tuState").querySelector("p").textContent = text;
+  }
+  function finish(ok, title, text) {
+    clearInterval(T.pollTimer);
+    showState(ok ? "✅" : "❌", title, text, false);
+    haptic(ok ? "success" : "error");
+    var done = $("tuDone"), again = $("tuAgain");
+    done.style.display = ""; done.textContent = ok ? "⭐ Stars sotib olish" : "Yopish";
+    done.onclick = function () {
+      if (ok) { var u = new URL(location.href); u.search = ""; location.replace(u.toString()); } else { step(1); }
+    };
+    again.style.display = ok ? "none" : "";
+    again.onclick = function () { step(1); };
+  }
+
+  $("tuSubmit").onclick = function () {
+    var btn = this; btn.disabled = true;
+    api("/api/topup/submit", { method: "POST", body: JSON.stringify({ amount: T.amount, tx_id: $("tuTx").value }) })
+      .then(function (d) {
+        $("tuDone").style.display = "none"; $("tuAgain").style.display = "none";
+        if (d.status === "done") {
+          step(3);
+          finish(true, "To'lov tasdiqlandi!", "+" + fmtN(T.amount) + " so'm hisobingizga qo'shildi. Hisobingiz: " + fmtN(d.balance_sum) + " so'm");
+        } else if (d.status === "manual") {
+          step(3);
+          finish(true, "So'rov yuborildi", "Admin to'lovni tekshirib, hisobingizga qo'shadi.");
+          $("tuDone").textContent = "Yopish"; $("tuDone").onclick = function () { tg ? tg.close() : history.back(); };
+        } else if (d.status === "pending") {
+          step(3);
+          var left = (d.timeout || 600);
+          showState("", "To'lov tekshirilmoqda...", "Bank xabari kelishini kutyapmiz (1–2 daqiqa). Oynani yopmasangiz ham bo'ladi — natija botga yuboriladi.", true);
+          T.pollTimer = setInterval(function () {
+            left -= 3;
+            api("/api/topup/status?order_id=" + d.order_id).then(function (s) {
+              if (!s.ok) return;
+              if (s.status === "done") {
+                finish(true, "To'lov tasdiqlandi!", "Hisobingiz: " + fmtN(s.balance_sum) + " so'm");
+              } else if (s.status === "rejected") {
+                finish(false, "To'lov bekor qilindi", REASONS[s.reason] || "To'lov tasdiqlanmadi.");
+              }
+            });
+            if (left < -40) { clearInterval(T.pollTimer); finish(false, "Kutish tugadi", "Natijani bot xabarida ko'rasiz."); }
+          }, 3000);
+        } else {
+          btn.disabled = false;
+          var msg = REASONS[d.error] || "To'lov qabul qilinmadi. Qayta urinib ko'ring.";
+          if (d.error === "bad_tx" || d.error === "duplicate") { toastMsg("❌ " + msg); haptic("error"); }
+          else { step(3); finish(false, "To'lov bekor qilindi", msg); }
+        }
+      })
+      .catch(function () { btn.disabled = false; toastMsg("❌ Server bilan aloqa uzildi"); });
+  };
+
+  // ---------- boshlash ----------
+  checkSub();
+  var qs = new URLSearchParams(location.search);
+  if (qs.get("tab") === "topup") showTab("topup");
+})();
+</script>
+</body>
+</html>
