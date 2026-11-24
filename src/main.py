@@ -20,6 +20,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramRetryAfter
 
 # Agar Windows bo'lsa va Python eski versiya — loop uchun proaktiv sozlash
 if sys.platform.startswith("win") and sys.version_info < (3, 14):
@@ -267,9 +268,25 @@ async def main() -> None:
         app.smm.on_result = _smm_result
         bg_tasks.append(asyncio.create_task(smm_sync_loop(app), name="smm-sync"))
 
-        # Token tekshiruvi: noto'g'ri bo'lsa aniq xabar bilan to'xtaydi
-        me = await bot.get_me()
-        logger.info("Bot: @%s (id=%s)", me.username, me.id)
+        # Token tekshiruvi: noto'g'ri bo'lsa aniq xabar bilan to'xtaydi.
+        # Telegram flood control (429) bo'lsa, servisni yiqitmaymiz: kutamiz
+        # va oxirida getMe'ni o'tkazib yuborib pollingni davom ettiramiz.
+        me = None
+        for attempt in range(1, 6):
+            try:
+                me = await bot.get_me()
+                break
+            except TelegramRetryAfter as exc:
+                wait = max(int(exc.retry_after), 5)
+                logger.warning(
+                    "Telegram flood control (getMe): %s soniya kutilmoqda (urinish %s/5)...",
+                    wait, attempt,
+                )
+                await asyncio.sleep(wait)
+        if me is not None:
+            logger.info("Bot: @%s (id=%s)", me.username, me.id)
+        else:
+            logger.warning("getMe tekshiruvi o'tkazib yuborildi (flood control); polling davom etadi.")
 
         # Polling bilan webhook bir vaqtda ishlamaydi
         await bot.delete_webhook(drop_pending_updates=False)
