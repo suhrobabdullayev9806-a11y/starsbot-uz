@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
+import secrets
 import time
 from datetime import datetime, timedelta
 from typing import Awaitable, Callable
@@ -48,6 +49,11 @@ _EXPENSE_RE = re.compile(
     re.IGNORECASE,
 )
 _TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9\-_]{5,}")
+# Valyuta yozilmagan, lekin kirim belgisi bilan kelgan xabarlar uchun zaxira:
+#   "➕ 50 037.00" yoki "+ 50037"
+_FALLBACK_AMOUNT_RE = re.compile(
+    r"(?:➕|\+)\s*(\d{1,3}(?:[ \u00a0,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)"
+)
 
 
 def norm_tx(value: str) -> str:
@@ -74,6 +80,13 @@ def parse_notification(text: str) -> dict | None:
     for line in text.splitlines():
         for m in _AMOUNT_RE.finditer(line):
             amounts.append((_to_amount(m.group(1)), bool(_INCOME_RE.search(line)), line))
+    if not amounts:
+        # Valyuta ko'rsatilmagan bo'lsa ham "➕/+ summa" qatoridan olamiz.
+        for line in text.splitlines():
+            m = _FALLBACK_AMOUNT_RE.search(line)
+            if m:
+                amounts.append((_to_amount(m.group(1)), True, line))
+                break
     if not amounts:
         return None
     income_lines = [a for a in amounts if a[1]]
@@ -217,6 +230,67 @@ class BankModule:
             res.update(ok=True, status="pending", reason="waiting")
         return res
 
+    # ---------------- noyob summa bilan avto-to'lov ----------------
+    async def create_topup(self, user_id: int, base_amount: float) -> dict:
+        """Noyob summa bilan kutilayotgan to'lov yaratadi.
+
+        Mijoz tanlagan summaga 1..99 so'm qo'shiladi (masalan 50 000 -> 50 037).
+        Aynan shu summa kartaga o'tkaziladi; userbot bank bildirishnomasini o'qib,
+        summa bo'yicha buyurtmani topadi va balansni avtomatik to'ldiradi.
+        Qaytaradi: {ok, order_id, amount, base, timeout} yoki {ok: False, error}.
+        """
+        try:
+            base = int(round(float(base_amount)))
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "bad_amount"}
+        if base < self.cfg.topup_min or base > self.cfg.topup_max:
+            return {"ok": False, "error": "amount_range"}
+        if not self.enabled:
+            return {"ok": False, "error": "auto_disabled"}
+
+        # Eskirgan pendinglarni bo'shatamiz, keyin band summalarni yig'amiz.
+        await self.process_pending()
+        pend = await self.db.fetch_one(
+            "SELECT COUNT(*) AS c FROM orders WHERE user_id=? AND type='topup' "
+            "AND payment_method=? AND status='pending'", (user_id, METHOD))
+        if pend and pend["c"] >= MAX_PENDING_PER_USER:
+            return {"ok": False, "error": "too_many_pending"}
+
+        used = await self._pending_amounts()
+        upper = min(base + 99, self.cfg.topup_max)
+        candidates = [a for a in range(base, upper + 1) if a not in used]
+        if not candidates:
+            return {"ok": False, "error": "busy"}
+        # Odatiy holatda bazaviy summaning o'zini emas, +1..99 ni tanlaymiz:
+        # shunda tasodifiy bir xil summa ikki buyurtmani chalkashtirmaydi.
+        unique = [a for a in candidates if a != base] or candidates
+        amount = unique[secrets.randbelow(len(unique))]
+
+        order_id = await self.orders.create(
+            user_id, "topup", 0, METHOD, price_amount=float(amount),
+            note=f"amt:{amount}",
+        )
+        return {"ok": True, "order_id": order_id, "amount": amount,
+                "base": base, "timeout": self.cfg.topup_verify_timeout}
+
+    async def _pending_amounts(self) -> set[int]:
+        """Hozir kutilayotgan barcha avto-to'lov summalari (noyoblik uchun)."""
+        rows = await self.db.fetch_all(
+            "SELECT price_amount FROM orders WHERE type='topup' "
+            "AND payment_method=? AND status='pending'", (METHOD,))
+        return {int(round(float(r["price_amount"]))) for r in rows}
+
+    async def check_topup(self, user_id: int, order_id: int) -> dict | None:
+        """Buyurtma holatini qaytaradi; pending bo'lsa darhol tekshiradi."""
+        order = await self.order_status(user_id, order_id)
+        if not order:
+            return None
+        if order["status"] == "pending" and self.enabled \
+                and str(order.get("note") or "").startswith("amt:"):
+            await self.process_pending()
+            order = await self.orders.get(order_id) or order
+        return order
+
     async def _try_match(self, order_id: int, user_id: int, amount: float, tx: str) -> tuple[str, str]:
         """('done'|'rejected'|'pending', sabab). Atomik: bir tranzaksiya bir marta ishlatiladi."""
         cur = await self.orders.get(order_id)
@@ -258,6 +332,39 @@ class BankModule:
         await self.users.add_sum(user_id, amount, f"topup auto order#{order_id}", order_id)
         return "done", "ok"
 
+    async def _match_amount_order(self, order: dict) -> tuple[str, str]:
+        """Noyob summa bo'yicha kelgan bank kirimini buyurtmaga bog'laydi."""
+        order_id = int(order["id"])
+        amount = float(order["price_amount"])
+        since = (datetime.now() - timedelta(hours=TX_MAX_AGE_HOURS)).isoformat(timespec="seconds")
+        rows = await self.db.fetch_all(
+            "SELECT * FROM bank_transactions WHERE created_at>=? AND income=1 "
+            "AND used_order IS NULL AND ABS(amount - ?) < 0.5 ORDER BY id",
+            (since, amount))
+        if not rows:
+            return "pending", "not_found_yet"
+        for row in rows:
+            if await self._claim_amount(order_id, int(order["user_id"]), amount, row):
+                return "done", "ok"
+        return "pending", "not_found_yet"
+
+    async def _claim_amount(self, order_id: int, user_id: int, amount: float,
+                            row: dict) -> bool:
+        """Bank yozuvi va buyurtmani atomik yakunlaydi (bir tranzaksiya bir marta)."""
+        if await self.db.execute_rc(
+            "UPDATE bank_transactions SET used_order=? WHERE id=? AND used_order IS NULL",
+            (order_id, row["id"])) != 1:
+            return False
+        if await self.db.execute_rc(
+            "UPDATE orders SET status='done', note=?, updated_at=? "
+            "WHERE id=? AND status='pending'",
+            (f"amt:{amount:.0f} | auto ok", now_iso(), order_id)) != 1:
+            await self.db.execute_rc(
+                "UPDATE bank_transactions SET used_order=NULL WHERE id=?", (row["id"],))
+            return False
+        await self.users.add_sum(user_id, amount, f"topup auto order#{order_id}", order_id)
+        return True
+
     async def _reject(self, order_id: int, reason: str) -> None:
         await self.db.execute_rc(
             "UPDATE orders SET status='rejected', note=note || ?, updated_at=? "
@@ -274,10 +381,14 @@ class BankModule:
         handled = 0
         now = datetime.now()
         for o in pend:
-            tx = (o.get("note") or "")[3:] if str(o.get("note") or "").startswith("tx:") else ""
-            tx = tx.split(" ", 1)[0]
+            note = str(o.get("note") or "")
             amount = float(o["price_amount"])
-            outcome, reason = await self._try_match(o["id"], o["user_id"], amount, tx)
+            if note.startswith("amt:"):
+                outcome, reason = await self._match_amount_order(o)
+            else:
+                tx = note[3:] if note.startswith("tx:") else ""
+                tx = tx.split(" ", 1)[0]
+                outcome, reason = await self._try_match(o["id"], o["user_id"], amount, tx)
             if outcome == "pending":
                 try:
                     age = (now - datetime.fromisoformat(str(o["created_at"]))).total_seconds()

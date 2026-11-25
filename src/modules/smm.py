@@ -242,37 +242,64 @@ class SmmModule:
         self._provider_cache = (now, raw)
         return raw
 
-    async def import_services(self, categories: list[str]) -> dict:
-        """Tanlangan kategoriyalardagi yangi xizmatlarni qo'shadi (mavjudlari tegilmaydi)."""
-        wanted = {c.strip() for c in categories if c and c.strip()}
-        if not wanted:
-            return {"added": 0, "skipped": 0}
+    async def import_services(self, categories: list[str] | None = None) -> dict:
+        """Provayder xizmatlarini katalogga qo'shadi va mavjudlarini yangilaydi.
+
+        categories=None -> BARCHA xizmatlar (API ulanganda avto-import).
+        Mavjud xizmatlarda narx faqat auto_price=1 bo'lsa qayta hisoblanadi:
+        admin qo'lda qo'ygan narx hech qachon o'zgarmaydi.
+        """
         s = await self.settings.get_smm()
-        raw = await self._provider_services()
-        have = {r["provider_id"] for r in await self.db.fetch_all(
-            "SELECT provider_id FROM smm_services WHERE provider_id != ''")}
-        added = skipped = 0
+        raw = await self._provider_services(force=categories is None)
+        wanted = None if categories is None else {c.strip() for c in categories if c and c.strip()}
+        if wanted is not None and not wanted:
+            return {"added": 0, "updated": 0, "skipped": 0}
+        have = {
+            r["provider_id"]: r
+            for r in await self.db.fetch_all(
+                "SELECT id, provider_id, price, auto_price FROM smm_services WHERE provider_id != ''")
+        }
+        inserts: list[tuple] = []
+        updates: list[tuple] = []
+        added = updated = skipped = 0
+        seen: set[str] = set()
+        now = now_iso()
         for x in raw:
-            cat = str(x.get("category") or "Boshqa").strip()
-            pid = str(x.get("service", "")).strip()
-            if cat not in wanted or not pid:
+            cat = str(x.get("category") or "Boshqa").strip()[:120]
+            pid = str(x.get("service", "")).strip()[:40]
+            if not pid or pid in seen:
                 continue
-            if pid in have:
-                skipped += 1
+            if wanted is not None and cat not in wanted:
                 continue
             cost = _float(x.get("rate"))
             if cost <= 0:
                 skipped += 1
                 continue
+            seen.add(pid)
+            name = str(x.get("name", "")).strip()[:200] or f"Service {pid}"
             mn = max(1, _int(x.get("min"), 10))
             mx = max(mn, _int(x.get("max"), 10000))
-            await self.add_service(
-                name=str(x.get("name", ""))[:200], category=cat, provider_id=pid,
-                cost=cost, price=self.auto_price(cost, s["rate"], s["markup"]),
-                min_qty=mn, max_qty=mx, auto_price=True, active=True)
-            have.add(pid)
-            added += 1
-        return {"added": added, "skipped": skipped}
+            old = have.get(pid)
+            auto_price = self.auto_price(cost, s["rate"], s["markup"])
+            if old:
+                auto = int(old.get("auto_price") or 0)
+                price = auto_price if auto else float(old.get("price") or 0)
+                updates.append((cost, name, cat, mn, mx, price, int(old["id"])))
+                updated += 1
+            else:
+                inserts.append((pid, detect_platform(cat, name), cat, name, "", cost,
+                                auto_price, 1, mn, mx, 1, now))
+                added += 1
+        if inserts:
+            await self.db.execute_many(
+                "INSERT INTO smm_services(provider_id, platform, category, name, description, "
+                " cost, price, auto_price, min_qty, max_qty, active, created_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", inserts)
+        if updates:
+            await self.db.execute_many(
+                "UPDATE smm_services SET cost=?, name=?, category=?, min_qty=?, max_qty=?, "
+                " price=? WHERE id=?", updates)
+        return {"added": added, "updated": updated, "skipped": skipped}
 
     # ------------------------------------------------------------------
     # Buyurtma berish

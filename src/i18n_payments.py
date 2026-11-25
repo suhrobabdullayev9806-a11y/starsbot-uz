@@ -13,8 +13,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "wallet_topup": "💳 <b>Hisobni to'ldirish</b>\n\n"
                         "Hisobingizga <b>so'm</b> tushiring, keyin shu pul bilan Stars, Gift yoki "
                         "postga stars xarid qilasiz.\n\n"
-                        "⚡️ <b>Avto-to'lov</b> — to'lang, tranzaksiya ID sini yozing, bot o'zi tekshirib "
-                        "hisobingizga qo'shadi (1–2 daqiqa).\n\n"
+                        "⚡️ <b>To'liq avto-to'lov</b> — bot sizga noyob summa beradi. Aynan shu summani "
+                        "o'tkazing, bank bildirishnomasi kelganda hisob avtomatik to'ladi (tranzaksiya ID shart emas).\n\n"
                         "👇 Usulni tanlang:",
         "topup_pick": "💳 <b>Hisobni to'ldirish</b>\n\n"
                       "Qancha so'm to'ldirmoqchisiz?\n"
@@ -30,6 +30,14 @@ TEXTS: dict[str, dict[str, str]] = {
                           "👤 Karta egasi: <b>{holder}</b>\n\n"
                           "⚠️ <b>Aynan {amount} so'm</b> o'tkazing — summa farq qilsa to'lov bekor bo'ladi.\n\n"
                           "To'lagach «✅ To'ladim» tugmasini bosing va <b>tranzaksiya ID</b> sini yozing.",
+        "topup_card_auto": "💳 <b>To'lov ma'lumotlari</b>\n\n"
+                           "💵 Aynan o'tkaziladigan summa: <b><code>{amount}</code> so'm</b>\n\n"
+                           "🏦 Karta raqami:\n<code>{card}</code>\n"
+                           "👤 Karta egasi: <b>{holder}</b>\n\n"
+                           "⚠️ <b>Faqat shu summani</b> o'tkazing — bank xabari shu noyob summa bo'yicha "
+                           "avtomatik aniqlanadi. Summani yaxlitlamang!\n\n"
+                           "⏳ To'lov {minutes} daqiqa ichida tasdiqlanadi. Tasdiqlangach bot sizga "
+                           "avtomatik xabar yuboradi.",
         "topup_card_pay_noholder": "—",
         "topup_ask_txid": "🧾 <b>Tranzaksiya ID sini yuboring</b>\n\n"
                           "Summa: <b>{amount} so'm</b>\n\n"
@@ -76,6 +84,10 @@ TEXTS: dict[str, dict[str, str]] = {
         "topup_btn_api": "🤖 Online to'lov",
         "topup_btn_other": "✍️ Boshqa summa",
         "topup_btn_paid": "✅ To'ladim",
+        "topup_btn_check": "🔄 Holatni tekshirish",
+        "topup_auto_busy": "⚠️ Hozir shu summa uchun barcha noyob variantlar band. Bir necha daqiqadan keyin qayta urinib ko'ring.",
+        "topup_auto_wait": "⏳ Hali bank xabari kelmadi. To'lovni amalga oshirganingizdan so'ng 1–2 daqiqa kuting.",
+        "topup_not_found": "⚠️ To'lov topilmadi. Qayta urinib ko'ring.",
         "topup_btn_cancel": "🚫 Bekor qilish",
         "topup_btn_retry": "🔁 Qayta urinish",
         "topup_btn_buy": "⭐ Stars sotib olish",
@@ -90,8 +102,9 @@ TEXTS: dict[str, dict[str, str]] = {
                                 "2️⃣ Come back and tap “✅ Check”",
         "wallet_topup": "💳 <b>Top up balance</b>\n\n"
                         "Add <b>UZS</b> to your balance, then spend it on Stars, Gifts or post stars.\n\n"
-                        "⚡️ <b>Auto payment</b> — pay, send the transaction ID, the bot verifies it and "
-                        "credits your balance (1–2 min).\n\n"
+                        "⚡️ <b>Fully automatic payment</b> — the bot gives you a unique amount. Transfer "
+                        "exactly that amount; the bank notification credits your balance automatically "
+                        "(no transaction ID needed).\n\n"
                         "👇 Choose a method:",
         "topup_pick": "💳 <b>Top up balance</b>\n\n"
                       "How much do you want to add?\n"
@@ -106,6 +119,14 @@ TEXTS: dict[str, dict[str, str]] = {
                           "👤 Cardholder: <b>{holder}</b>\n\n"
                           "⚠️ Transfer <b>exactly {amount} UZS</b> — a different amount will be cancelled.\n\n"
                           "After paying tap “✅ I paid” and send the <b>transaction ID</b>.",
+        "topup_card_auto": "💳 <b>Payment details</b>\n\n"
+                           "💵 Exact amount to transfer: <b><code>{amount}</code> UZS</b>\n\n"
+                           "🏦 Card number:\n<code>{card}</code>\n"
+                           "👤 Cardholder: <b>{holder}</b>\n\n"
+                           "⚠️ Transfer <b>exactly this amount</b> — the bank notification is matched by "
+                           "this unique amount. Do not round it!\n\n"
+                           "⏳ The payment is confirmed within {minutes} minutes. The bot will message you "
+                           "automatically once it is credited.",
         "topup_card_pay_noholder": "—",
         "topup_ask_txid": "🧾 <b>Send the transaction ID</b>\n\n"
                           "Amount: <b>{amount} UZS</b>\n\n"
@@ -148,6 +169,10 @@ TEXTS: dict[str, dict[str, str]] = {
         "topup_btn_api": "🤖 Online payment",
         "topup_btn_other": "✍️ Other amount",
         "topup_btn_paid": "✅ I paid",
+        "topup_btn_check": "🔄 Check status",
+        "topup_auto_busy": "⚠️ All unique amounts for this value are busy right now. Please try again in a few minutes.",
+        "topup_auto_wait": "⏳ No bank notification yet. Wait 1–2 minutes after making the payment.",
+        "topup_not_found": "⚠️ Payment not found. Please try again.",
         "topup_btn_cancel": "🚫 Cancel",
         "topup_btn_retry": "🔁 Try again",
         "topup_btn_buy": "⭐ Buy Stars",
@@ -162,8 +187,9 @@ TEXTS: dict[str, dict[str, str]] = {
                                 "2️⃣ Вернитесь и нажмите «✅ Проверить»",
         "wallet_topup": "💳 <b>Пополнение баланса</b>\n\n"
                         "Пополните <b>сумы</b>, затем покупайте Stars, подарки или звёзды на пост.\n\n"
-                        "⚡️ <b>Автоплатёж</b> — оплатите, отправьте ID транзакции, бот проверит и "
-                        "зачислит деньги (1–2 мин).\n\n"
+                        "⚡️ <b>Полностью автоматический платёж</b> — бот выдаёт уникальную сумму. "
+                        "Переведите ровно её; уведомление банка зачислит деньги автоматически "
+                        "(ID транзакции не нужен).\n\n"
                         "👇 Выберите способ:",
         "topup_pick": "💳 <b>Пополнение баланса</b>\n\n"
                       "Сколько хотите внести?\n"
@@ -178,6 +204,14 @@ TEXTS: dict[str, dict[str, str]] = {
                           "👤 Владелец: <b>{holder}</b>\n\n"
                           "⚠️ Переведите <b>ровно {amount} сум</b> — при другой сумме платёж отменяется.\n\n"
                           "После оплаты нажмите «✅ Я оплатил» и отправьте <b>ID транзакции</b>.",
+        "topup_card_auto": "💳 <b>Реквизиты для оплаты</b>\n\n"
+                           "💵 Точная сумма к переводу: <b><code>{amount}</code> сум</b>\n\n"
+                           "🏦 Номер карты:\n<code>{card}</code>\n"
+                           "👤 Владелец: <b>{holder}</b>\n\n"
+                           "⚠️ Переведите <b>ровно эту сумму</b> — уведомление банка сопоставляется по "
+                           "уникальной сумме. Не округляйте!\n\n"
+                           "⏳ Платёж подтверждается в течение {minutes} минут. После зачисления бот "
+                           "пришлёт сообщение автоматически.",
         "topup_card_pay_noholder": "—",
         "topup_ask_txid": "🧾 <b>Отправьте ID транзакции</b>\n\n"
                           "Сумма: <b>{amount} сум</b>\n\n"
@@ -220,6 +254,10 @@ TEXTS: dict[str, dict[str, str]] = {
         "topup_btn_api": "🤖 Онлайн-оплата",
         "topup_btn_other": "✍️ Другая сумма",
         "topup_btn_paid": "✅ Я оплатил",
+        "topup_btn_check": "🔄 Проверить статус",
+        "topup_auto_busy": "⚠️ Все уникальные суммы для этого значения заняты. Попробуйте через несколько минут.",
+        "topup_auto_wait": "⏳ Уведомление банка ещё не пришло. Подождите 1–2 минуты после оплаты.",
+        "topup_not_found": "⚠️ Платёж не найден. Попробуйте снова.",
         "topup_btn_cancel": "🚫 Отмена",
         "topup_btn_retry": "🔁 Повторить",
         "topup_btn_buy": "⭐ Купить Stars",

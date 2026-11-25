@@ -228,10 +228,17 @@ def topup_amounts_kb(lang: str, lo: int = 5000, hi: int = 10_000_000) -> InlineK
     return kb.as_markup()
 
 
-def topup_pay_kb(lang: str) -> InlineKeyboardMarkup:
-    """Rekvizitlar ostidagi tugmalar."""
+def topup_pay_kb(lang: str, auto: bool = False, order_id: int = 0) -> InlineKeyboardMarkup:
+    """Rekvizitlar ostidagi tugmalar.
+
+    auto=True: noyob summa bo'yicha avto-to'lov — tranzaksiya ID so'ralmaydi,
+    faqat holatni tekshirish tugmasi ko'rsatiladi.
+    """
     kb = InlineKeyboardBuilder()
-    kb.row(btn(t(lang, "topup_btn_paid"), "topup:paid", GREEN))
+    if auto and order_id:
+        kb.row(btn(t(lang, "topup_btn_check"), f"topup:check:{order_id}", GREEN))
+    else:
+        kb.row(btn(t(lang, "topup_btn_paid"), "topup:paid", GREEN))
     kb.row(btn(t(lang, "topup_btn_cancel"), "topup:cancel", RED))
     return kb.as_markup()
 

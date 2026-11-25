@@ -175,7 +175,7 @@ async def topup_other(cb: CallbackQuery, app: App, state: FSMContext) -> None:
 
 
 async def _show_pay_details(target, app: App, state: FSMContext, lang: str, value: int) -> None:
-    """Karta rekvizitlari + 'To'ladim' tugmasi."""
+    """Karta rekvizitlari + (avto rejimda) noyob summa va tekshirish tugmasi."""
     card = (await app.settings.payment_card() or app.cfg.payment_card or "").strip()
     holder = (await app.settings.payment_card_holder() or app.cfg.payment_card_holder or "").strip()
     if not card:
@@ -183,6 +183,32 @@ async def _show_pay_details(target, app: App, state: FSMContext, lang: str, valu
         return
     await state.set_state(None)
     await state.update_data(topup_sum=value, topup_method="card")
+
+    # To'liq avto: mijozga noyob summa beriladi. Bank xabari kelganda userbot
+    # summa bo'yicha buyurtmani topib, balansni avtomatik to'ldiradi.
+    if app.bank.enabled:
+        res = await app.bank.create_topup(int(target.from_user.id), value)
+        if not res.get("ok"):
+            err = str(res.get("error") or "")
+            if err == "too_many_pending":
+                text = t(lang, "topup_fail_too_many_pending")
+            elif err == "busy":
+                text = t(lang, "topup_auto_busy")
+            else:
+                text = t(lang, "topup_fail_generic")
+            await edit_or_send(target, text, reply_markup=topup_cancel_kb(lang))
+            return
+        amount = int(res["amount"])
+        await state.update_data(topup_sum=amount, topup_order=res["order_id"])
+        minutes = max(1, int(res.get("timeout", app.cfg.topup_verify_timeout) // 60))
+        await edit_or_send(
+            target,
+            t(lang, "topup_card_auto", amount=_sp(amount), card=card,
+              holder=holder or t(lang, "topup_card_pay_noholder"), minutes=minutes),
+            reply_markup=topup_pay_kb(lang, auto=True, order_id=res["order_id"]),
+        )
+        return
+
     await edit_or_send(
         target,
         t(lang, "topup_card_pay", amount=_sp(value), card=card,
@@ -251,6 +277,36 @@ async def topup_paid(cb: CallbackQuery, app: App, state: FSMContext) -> None:
     await state.set_state(TopupFlow.wait_txid)
     await edit_or_send(cb, t(lang, "topup_ask_txid", amount=_sp(value)),
                        reply_markup=topup_cancel_kb(lang))
+
+
+@router.callback_query(F.data.startswith("topup:check:"))
+async def topup_check(cb: CallbackQuery, app: App) -> None:
+    """Avto-to'lov holatini tekshirish (tranzaksiya ID talab qilinmaydi)."""
+    lang = await _lang(app, cb.from_user.id)
+    try:
+        order_id = int(cb.data.split(":")[2])
+    except (IndexError, ValueError):
+        await cb.answer("⚠️", show_alert=True)
+        return
+    order = await app.bank.check_topup(cb.from_user.id, order_id)
+    if not order:
+        await cb.answer(t(lang, "topup_not_found"), show_alert=True)
+        return
+    if order["status"] == "done":
+        balance = _sp(await app.users.balance_sum(cb.from_user.id))
+        await edit_or_send(
+            cb,
+            t(lang, "topup_ok", amount=_sp(float(order["price_amount"])), balance=balance),
+            reply_markup=topup_result_kb(lang, True),
+        )
+        asyncio.create_task(_safe_pay_channel(cb.bot, app, order_id))
+    elif order["status"] == "rejected":
+        await edit_or_send(
+            cb, t(lang, "topup_fail_generic"),
+            reply_markup=topup_result_kb(lang, False),
+        )
+    else:
+        await cb.answer(t(lang, "topup_auto_wait"), show_alert=True)
 
 
 @router.callback_query(F.data == "topup:cancel")

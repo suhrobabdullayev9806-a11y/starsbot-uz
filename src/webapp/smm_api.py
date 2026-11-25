@@ -281,7 +281,16 @@ def register_smm_api(server: FastAPI, app: App, any_user, admin_user) -> None:
         repriced = 0
         if "rate" in upd or "markup" in upd:
             repriced = await smm.reprice_all()
-        return {"ok": True, "repriced": repriced}
+        # API ulanishi saqlanganda barcha xizmatlar avtomatik import qilinadi.
+        imported = None
+        current = await app.settings.get_smm()
+        if current["url"] and current["key"] and (
+                any(k in upd for k in ("url", "key", "enabled")) or "url" in b or "key" in b):
+            try:
+                imported = await smm.import_services()
+            except SmmError as exc:
+                imported = {"error": str(exc)}
+        return {"ok": True, "repriced": repriced, "imported": imported}
 
     @server.post("/api/adm/smm/test")
     @_safe
@@ -311,10 +320,13 @@ def register_smm_api(server: FastAPI, app: App, any_user, admin_user) -> None:
             return deny()
         b = await _body(request)
         cats = b.get("categories")
-        if not isinstance(cats, list) or not cats:
-            return {"ok": False, "error": "bad_request"}
+        # Kategoriya tanlanmasa yoki all=true bo'lsa — BARCHA xizmatlar import qilinadi.
+        if b.get("all") or not isinstance(cats, list) or not cats:
+            selected = None
+        else:
+            selected = [str(c) for c in cats][:500]
         try:
-            res = await smm.import_services([str(c) for c in cats][:500])
+            res = await smm.import_services(selected)
         except SmmError as exc:
             return {"ok": False, "error": "provider", "detail": str(exc)}
         return {"ok": True, **res}

@@ -48,7 +48,7 @@ class Settings(BaseModel):
     bank_auto: bool = False         # faqat /bankadd orqali qo'lda kiritilsa ham avto rejim
     topup_min: int = 5000
     topup_max: int = 10_000_000
-    topup_verify_timeout: int = 600  # sekund: shundan keyin topilmasa bekor qilinadi
+    topup_verify_timeout: int = 900  # sekund: noyob summa shuncha vaqt band turadi
 
     # --- API (@Apilarimbot) ---
     stars_api_base_url: str = ""
@@ -157,7 +157,7 @@ class Settings(BaseModel):
             bank_auto=os.getenv("BANK_AUTO", "").strip().lower() in {"1", "true", "yes", "on"},
             topup_min=_int_env("TOPUP_MIN", 5000),
             topup_max=_int_env("TOPUP_MAX", 10_000_000),
-            topup_verify_timeout=_int_env("TOPUP_VERIFY_TIMEOUT", 600),
+            topup_verify_timeout=_int_env("TOPUP_VERIFY_TIMEOUT", 900),
             stars_api_base_url=os.getenv("STARS_API_BASE_URL", ""),
             stars_api_key=os.getenv("STARS_API_KEY", ""),
             api_callback_secret=os.getenv("API_CALLBACK_SECRET", ""),

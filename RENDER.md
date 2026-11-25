@@ -92,31 +92,33 @@ Talablar: kamida bitta **faol** akkaunt ulangan va uning **Stars balansi** yetar
 post ochiq kanalda bo'lsin (yopiq kanal `t.me/c/...` uchun akkaunt kanal a'zosi bo'lishi shart).
 
 
-## 💳 AVTO-TO'LOV (mini-app + bot): qanday ishlaydi
+## 💳 TO'LIQ AVTO-TO'LOV (Humo/Uzcard Telegram bildirishnomalari): qanday ishlaydi
 1. Foydalanuvchi **mini-app → «Hisob to'ldirish»** (yoki botda «💳 Hisobni to'ldirish → Karta orqali») dan summani tanlaydi.
-2. Karta raqami, **karta egasi ismi** va aynan to'lanadigan summa ko'rinadi (nusxalash tugmalari bilan).
-3. U to'laydi va **tranzaksiya ID** sini yozadi.
-4. Bot shu ID + aynan shu summa bilan yozilgan kirim bildirishnomasini qidiradi:
-   - topilsa → balansga qo'shadi (**bitta tranzaksiya faqat bir marta**);
-   - summa mos kelmasa / ID ishlatilgan bo'lsa → darhol **bekor qiladi**;
-   - hali kelmagan bo'lsa → `TOPUP_VERIFY_TIMEOUT` (default 10 daqiqa) kutadi, kelmasa **bekor qiladi**.
-   Natija botga tugmali xabar bo'lib keladi.
+2. Bot unga **noyob summa** beradi: masalan 50 000 so'm → **50 037 so'm**. Karta raqami, karta egasi va aynan shu summa ko'rsatiladi.
+3. Foydalanuvchi **aynan shu summani** kartaga o'tkazadi. Tranzaksiya ID kiritish shart emas.
+4. Karta egasining userboti (Telethon) bankning Telegram bildirishnoma botidan kelgan xabarni o'qiydi:
+   `➕ 50 037.00 UZS, HUMOCARD *1234, 25.11.26 15:42`
+5. Userbot summani ajratib, kutilayotgan buyurtmalar orasidan aynan shu summani topadi va **balansni avtomatik to'ldiradi** (bitta bank kirimi faqat bir marta ishlatiladi).
+6. Natija foydalanuvchiga bot orqali darhol yuboriladi. `TOPUP_VERIFY_TIMEOUT` (default 15 daqiqa) ichida to'lov kelmasa buyurtma bekor qilinadi.
 
-### Bank xabarlari botga qanday keladi? (MUHIM)
-Bot bank API'siga ulanmaydi, u **karta egasiga kelgan kirim bildirishnomasini** o'qiydi.
-Quyidagilardan kamida bittasini sozlang:
+### Userbotni sozlash (bir marta)
+1. **Humo/Uzcard bildirishnomasini yoqing.** Humo uchun `HUMOcardbot` (yoki bankingizning xabar boti) ga kartangizni telefon raqami orqali ulang. Uzcard uchun bank ilovasi orqali Telegram bildirishnomalarini yoqing.
+2. **Alohida Telegram akkaunt oching** (gift akkauntidan ham, asosiy akkauntingizdan ham boshqa). Shu akkauntda bank bildirishnoma botiga kirib, xabarlarni yoqing.
+3. `python tools/gen_session.py` ni ishga tushiring (Telethon o'rnatilgan bo'lsin), telefon raqam + kod bilan kiring va chiqqan uzun `StringSession` qatorini oling.
+4. Render → Environment:
+   - `BANK_SESSION` = olingan session qatori (hech kimga bermang, gitga push qilmang!)
+   - `BANK_SOURCE_CHATS` = bildirishnoma yuboradigan bot username'lari, vergul bilan: `HUMOcardbot,CardXabarBot`
+   - `PAYMENT_CARD` = karta raqami, `PAYMENT_CARD_HOLDER` = karta egasi
+5. Deploy qiling. Logda `Bank tinglovchi ishga tushdi: ...` ko'rinishi kerak. Test: o'zingiz kichik summa bilan to'lov qilib ko'ring.
 
+### Zaxira usullar
 | Usul | Sozlash |
 |---|---|
-| **Webhook** (SMS-forwarder) | Render'da `BANK_WEBHOOK_SECRET` kiriting. Karta ulangan telefonda SMS-forwarder ilovasi o'rnatib, `POST https://<servis>.onrender.com/api/bank/notify`, sarlavha `X-Bank-Secret: <secret>`, tana `{"text":"<SMS matni>"}` yuboring. |
-| **Telegram bildirishnoma boti** (CardXabar va h.k.) | `python tools/gen_session.py` bilan karta egasi akkaunti sessiyasini oling → `BANK_SESSION`, bot username'ini `BANK_SOURCE_CHATS` ga yozing (vergul bilan). Gift akkauntidan **boshqa** akkaunt ishlating. |
+| **Webhook** (SMS-forwarder) | `BANK_WEBHOOK_SECRET` kiriting. Telefonda SMS-forwarder ilovasi `POST https://<servis>.onrender.com/api/bank/notify`, sarlavha `X-Bank-Secret: <secret>`, tana `{"text":"<SMS matni>"}` yuboradi. |
 | **Qo'lda** | `BANK_AUTO=1` va admin bank xabarini `/bankadd <matn>` bilan kiritadi. |
 
 Hech biri sozlanmasa — to'lovlar **adminga qo'lda tasdiqlash** tugmalari bilan boradi (xavfsiz zaxira rejim).
-
-Tranzaksiya ID bildirishnoma matnida bo'lishi kerak (masalan `Ref: 4821937465`, `ID: ...`, `Чек №...`).
-Bank xabarida ID umuman bo'lmasa, avto-tekshiruv ishlamaydi — shu holda qo'lda rejimdan foydalaning.
-Test uchun: `/bankadd ➕ 50 000.00 UZS Ref: 4821937465` ni yuborib, so'ng 50 000 so'm va shu ID bilan to'lov qilib ko'ring.
+Eski usul (tranzaksiya ID kiritish) ham saqlanadi: avto manba sozlanmagan bo'lsa bot ID so'raydi.
 
 ## 🔒 Majburiy obuna
 Admin panel → «Kanal» (yoki `REQUIRED_CHANNEL` env) orqali kanal beriladi. Bot **kanalda admin** bo'lishi shart.

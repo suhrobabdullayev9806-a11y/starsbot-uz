@@ -289,7 +289,7 @@
   <div id="tuStep1">
     <div class="hero">
       <h2>💳 Hisobni to'ldirish</h2>
-      <p>Summani tanlang, to'lang va tranzaksiya ID sini yozing — bot o'zi tekshirib hisobingizga qo'shadi.</p>
+      <p>Summani tanlang — bot sizga noyob summa beradi. Aynan shu summani o'tkazing, bank xabari kelganda hisob avtomatik to'ladi.</p>
     </div>
     <div class="section-title">Summani tanlang</div>
     <div class="chips" id="tuChips"></div>
@@ -306,10 +306,15 @@
       <div class="row"><div><div class="lbl">Karta raqami</div><div class="val card" id="payCard">—</div></div><button class="copy" data-copy="card">📋 Nusxa</button></div>
       <div class="row"><div><div class="lbl">Karta egasi</div><div class="val" id="payHolder" style="font-size:16px">—</div></div></div>
     </div>
-    <div class="warn">⚠️ <b>Aynan shu summani</b> o'tkazing. Summa farq qilsa to'lov avtomatik bekor bo'ladi.</div>
-    <div class="section-title">Tranzaksiya ID</div>
-    <input class="field" id="tuTx" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Masalan: 4821937465">
-    <div class="hint">To'lagach bank ilovasidagi chekdan «ID / Ref / Chek raqami» ni nusxalab shu yerga qo'ying.</div>
+    <div class="warn">⚠️ <b>Aynan shu summani</b> o'tkazing — summani yaxlitlamang. Bank xabari shu noyob summa bo'yicha avtomatik aniqlanadi.</div>
+    <div id="tuAutoBox" style="display:none">
+      <div class="hint">⏳ To'lov avtomatik tekshirilmoqda. Tranzaksiya ID kiritish shart emas — bank xabari kelganda hisobingiz to'ladi va bot sizga xabar yuboradi.</div>
+    </div>
+    <div id="tuTxWrap">
+      <div class="section-title">Tranzaksiya ID</div>
+      <input class="field" id="tuTx" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Masalan: 4821937465">
+      <div class="hint">To'lagach bank ilovasidagi chekdan «ID / Ref / Chek raqami» ni nusxalab shu yerga qo'ying.</div>
+    </div>
     <button class="btn" id="tuSubmit" disabled>✅ To'ladim, tekshirish</button>
     <button class="btn secondary" id="tuBack">← Summani o'zgartirish</button>
   </div>
@@ -519,7 +524,7 @@
   var headers = { "X-Telegram-Init-Data": (tg && tg.initData) || "", "Content-Type": "application/json" };
   var $ = function (id) { return document.getElementById(id); };
   var fmtN = function (n) { return Number(n).toLocaleString("ru-RU"); };
-  var T = { info: null, amount: 0, pollTimer: null, loaded: false };
+  var T = { info: null, amount: 0, order: 0, pollTimer: null, loaded: false };
 
   function api(path, opts) {
     return fetch(path, Object.assign({ headers: headers }, opts || {}))
@@ -591,16 +596,46 @@
     this.value = v ? fmtN(v) : "";
     setAmount(v);
   });
+  function showPay(amount, card, holder) {
+    $("payAmount").textContent = fmtN(amount) + " so'm";
+    $("payCard").textContent = String(card).replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
+    $("payHolder").textContent = holder || "—";
+  }
   $("tuNext").onclick = function () {
     var i = T.info;
     if (!i.card) { toastMsg("⚠️ To'lov kartasi sozlanmagan. Admin bilan bog'laning."); return; }
-    $("payAmount").textContent = fmtN(T.amount) + " so'm";
-    $("payCard").textContent = i.card.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
-    $("payHolder").textContent = i.holder || "—";
+    T.order = 0;
+    if (i.auto) {
+      var btn = this; btn.disabled = true;
+      api("/api/topup/create", { method: "POST", body: JSON.stringify({ amount: T.amount }) })
+        .then(function (d) {
+          btn.disabled = false;
+          if (!d.ok) {
+            toastMsg("⚠️ " + (REASONS[d.error] || "To'lov yaratilmadi. Qayta urinib ko'ring."));
+            haptic("error");
+            return;
+          }
+          T.order = d.order_id;
+          T.amount = d.amount;
+          showPay(d.amount, d.card, d.holder);
+          $("tuTxWrap").style.display = "none";
+          $("tuAutoBox").style.display = "";
+          $("tuSubmit").textContent = "🔄 Holatni tekshirish";
+          $("tuSubmit").disabled = false;
+          step(2);
+          startPoll(d.order_id, d.timeout);
+        })
+        .catch(function () { btn.disabled = false; toastMsg("❌ Server bilan aloqa uzildi"); });
+      return;
+    }
+    showPay(T.amount, i.card, i.holder);
+    $("tuTxWrap").style.display = "";
+    $("tuAutoBox").style.display = "none";
+    $("tuSubmit").textContent = "✅ To'ladim, tekshirish";
     $("tuTx").value = ""; $("tuSubmit").disabled = true;
     step(2);
   };
-  $("tuBack").onclick = function () { step(1); };
+  $("tuBack").onclick = function () { clearInterval(T.pollTimer); step(1); };
 
   // ---------- nusxa ----------
   function copy(text) {
@@ -643,7 +678,10 @@
     rate_limit: "Juda ko'p urinish. Bir soatdan keyin qayta urinib ko'ring.",
     no_card: "To'lov kartasi sozlanmagan. Admin bilan bog'laning.",
     subscribe: "Avval kanalga obuna bo'ling.",
-    manual_review: "So'rov adminga yuborildi."
+    manual_review: "So'rov adminga yuborildi.",
+    busy: "Bu summa hozir band. Boshqa summa tanlab qayta urinib ko'ring.",
+    auto_disabled: "Avto-to'lov vaqtincha o'chirilgan. Admin bilan bog'laning.",
+    bad_amount: "Summa noto'g'ri."
   };
 
   function showState(icon, title, text, spin) {
@@ -654,6 +692,7 @@
   }
   function finish(ok, title, text) {
     clearInterval(T.pollTimer);
+    step(3);
     showState(ok ? "✅" : "❌", title, text, false);
     haptic(ok ? "success" : "error");
     var done = $("tuDone"), again = $("tuAgain");
@@ -665,8 +704,43 @@
     again.onclick = function () { step(1); };
   }
 
+  function startPoll(orderId, timeout) {
+    clearInterval(T.pollTimer);
+    var left = timeout || 600;
+    T.pollTimer = setInterval(function () {
+      left -= 3;
+      api("/api/topup/status?order_id=" + orderId).then(function (s) {
+        if (!s.ok) return;
+        if (s.status === "done") {
+          finish(true, "To'lov tasdiqlandi!", "Hisobingiz: " + fmtN(s.balance_sum) + " so'm");
+        } else if (s.status === "rejected") {
+          finish(false, "To'lov bekor qilindi", REASONS[s.reason] || "To'lov tasdiqlanmadi.");
+        }
+      });
+      if (left < -40) {
+        clearInterval(T.pollTimer);
+        finish(false, "Kutish tugadi", "Natijani bot xabarida ko'rasiz.");
+      }
+    }, 3000);
+  }
+  function checkOnce(orderId, cb) {
+    api("/api/topup/status?order_id=" + orderId).then(function (s) {
+      if (!s.ok) { toastMsg("⚠️ To'lov topilmadi."); }
+      else if (s.status === "done") { finish(true, "To'lov tasdiqlandi!", "Hisobingiz: " + fmtN(s.balance_sum) + " so'm"); }
+      else if (s.status === "rejected") { finish(false, "To'lov bekor qilindi", REASONS[s.reason] || "To'lov tasdiqlanmadi."); }
+      else { toastMsg("⏳ Hali bank xabari kelmadi. 1–2 daqiqa kuting."); }
+      if (cb) cb();
+    });
+  }
+
   $("tuSubmit").onclick = function () {
-    var btn = this; btn.disabled = true;
+    var btn = this;
+    if (T.order) {
+      btn.disabled = true;
+      checkOnce(T.order, function () { btn.disabled = false; });
+      return;
+    }
+    btn.disabled = true;
     api("/api/topup/submit", { method: "POST", body: JSON.stringify({ amount: T.amount, tx_id: $("tuTx").value }) })
       .then(function (d) {
         $("tuDone").style.display = "none"; $("tuAgain").style.display = "none";

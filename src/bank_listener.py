@@ -51,6 +51,9 @@ async def run_bank_listener(app) -> None:
                 try:
                     res = await app.bank.ingest(text, "telegram")
                     log.info("bank xabari: stored=%s amount=%s", res.get("stored"), res.get("amount"))
+                    if not res.get("stored"):
+                        log.warning("bank xabari tushunilmadi (%s): %s",
+                                    res.get("reason"), text[:200].replace("\n", " | "))
                 except Exception as exc:  # noqa: BLE001
                     log.warning("bank xabarini saqlashda xato: %s", exc)
 

@@ -179,6 +179,21 @@ async def bank_verify_loop(app: App, interval: int = 15) -> None:
             logger.warning("bank tekshiruv xatosi: %s", exc)
 
 
+async def smm_auto_import(app: App) -> None:
+    """SMM API ulangan bo'lsa, barcha xizmatlarni fonda import qiladi."""
+    try:
+        s = await app.settings.get_smm()
+        if not (s["enabled"] and s["url"] and s["key"]):
+            return
+        res = await app.smm.import_services()
+        logger.info("SMM avto-import: qo'shildi=%s, yangilandi=%s, o'tkazildi=%s",
+                    res.get("added"), res.get("updated"), res.get("skipped"))
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("SMM avto-import xatosi: %s", exc)
+
+
 async def smm_sync_loop(app: App, interval: int = 60) -> None:
     """SMM buyurtmalar holatini provayderdan olib turadi (tugaganlarni yakunlaydi/qaytaradi)."""
     while True:
@@ -267,6 +282,7 @@ async def main() -> None:
 
         app.smm.on_result = _smm_result
         bg_tasks.append(asyncio.create_task(smm_sync_loop(app), name="smm-sync"))
+        bg_tasks.append(asyncio.create_task(smm_auto_import(app), name="smm-import"))
 
         # Token tekshiruvi: noto'g'ri bo'lsa aniq xabar bilan to'xtaydi.
         # Telegram flood control (429) bo'lsa, servisni yiqitmaymiz: kutamiz

@@ -505,6 +505,40 @@ def make_server(app: App) -> FastAPI:
         note = str(order.get("note") or "")
         return note.split("|")[-1].strip() if "|" in note else ""
 
+    @server.post("/api/topup/create")
+    async def api_topup_create(request: Request):
+        """Noyob summa bilan avto-to'lov yaratadi (mini-app uchun)."""
+        info = await any_user(request)
+        if not info:
+            return JSONResponse({"ok": False, "error": "auth"}, status_code=401)
+        user_id = int(info["id"])
+        if not await app.sub_guard.ok(app, app.bot, user_id):
+            return {"ok": False, "error": "subscribe"}
+        if not app.bank.enabled:
+            return {"ok": False, "error": "auto_disabled"}
+        try:
+            body = await request.json()
+            amount = float(body.get("amount", 0))
+        except Exception:  # noqa: BLE001
+            return JSONResponse({"ok": False, "error": "bad_request"}, status_code=400)
+        card = (await app.settings.payment_card() or cfg.payment_card or "").strip()
+        holder = (await app.settings.payment_card_holder() or cfg.payment_card_holder or "").strip()
+        if not card:
+            return {"ok": False, "error": "no_card"}
+        await app.users.get_or_create(user_id, info.get("username") or "", "", "uz")
+        res = await app.bank.create_topup(user_id, amount)
+        if not res.get("ok"):
+            return {"ok": False, "error": res.get("error", "bad_request")}
+        return {
+            "ok": True,
+            "order_id": res["order_id"],
+            "amount": res["amount"],
+            "base": res.get("base", amount),
+            "card": card,
+            "holder": holder,
+            "timeout": res.get("timeout", cfg.topup_verify_timeout),
+        }
+
     @server.post("/api/topup/submit")
     async def api_topup_submit(request: Request):
         info = await any_user(request)
@@ -562,7 +596,7 @@ def make_server(app: App) -> FastAPI:
         if not info:
             return JSONResponse({"ok": False, "error": "auth"}, status_code=401)
         user_id = int(info["id"])
-        order = await app.bank.order_status(user_id, order_id)
+        order = await app.bank.check_topup(user_id, order_id)
         if not order:
             return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
         return {
