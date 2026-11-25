@@ -113,6 +113,15 @@ def register_smm_api(server: FastAPI, app: App, any_user, admin_user) -> None:
         await app.users.get_or_create(uid, info.get("username") or "", "", "uz")
         res = await smm.place_order(uid, int(_num(b.get("service_id"))),
                                     str(b.get("link", "")), int(_num(b.get("quantity"))), "app")
+        if res.get("ok") and app.bot:
+            try:
+                from src.handlers._helpers import notify_smm_channel
+
+                o = await smm.get_order(res["order_id"])
+                if o:
+                    await notify_smm_channel(app.bot, app, o, "new")
+            except Exception:  # noqa: BLE001
+                pass
         return res
 
     @server.get("/api/smm/orders")
@@ -210,6 +219,15 @@ def register_smm_api(server: FastAPI, app: App, any_user, admin_user) -> None:
                                         str(data.get("link", "")), int(_num(data.get("quantity"))),
                                         "api")
             if res["ok"]:
+                if app.bot:
+                    try:
+                        from src.handlers._helpers import notify_smm_channel
+
+                        o = await smm.get_order(res["order_id"])
+                        if o:
+                            await notify_smm_channel(app.bot, app, o, "new")
+                    except Exception:  # noqa: BLE001
+                        pass
                 return {"order": res["order_id"]}
             msg = {"insufficient_sum": "Not enough funds on balance",
                    "no_service": "Incorrect service ID", "bad_link": "Incorrect link",

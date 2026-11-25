@@ -80,6 +80,9 @@ async def notify_uc_order(bot, app: App, order_id: int) -> None:
             await bot.send_message(admin_id, text, reply_markup=kb, disable_web_page_preview=True)
         except Exception as exc:  # noqa: BLE001
             _log.warning("uc buyurtma adminga yetmadi admin=%s: %s", admin_id, exc)
+    from src.handlers._helpers import notify_payments_channel
+
+    await notify_payments_channel(bot, app, o["order_id"])
 
 
 async def notify_buyer_accepted(bot, app: App, order_id: int) -> None:

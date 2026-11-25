@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery, Message
 
 from src.app import App
 from src.assets import menu_banner, send_smart_photo
-from src.handlers._helpers import edit_or_send, is_subscribed
+from src.handlers._helpers import edit_or_send
 from src.i18n import t
 from src.keyboards import check_subscribe_kb, language_kb, main_menu_kb
 
@@ -65,14 +65,20 @@ async def cmd_start(message: Message, app: App) -> None:
 
     lang = user.get("language") or "uz"
 
-    # Obuna tekshiruvi (agar kanal sozlangan bo'lsa)
-    channel, channel_id = await app.settings.get_channel()
-    if channel and not await is_subscribed(message.bot, message.from_user.id, channel, channel_id):
-        await message.answer(
-            t(lang, "start_not_subscribed", channel=channel),
-            reply_markup=check_subscribe_kb(lang, channel),
-        )
-        return
+    # Obuna tekshiruvi (barcha majburiy kanallar)
+    channels = await app.settings.get_channels()
+    if channels:
+        from src.subscription import missing_channels
+
+        missing = await missing_channels(message.bot, message.from_user.id, channels)
+        if missing:
+            label = ", ".join(
+                "@" + str(c.get("username")) for c in channels if c.get("username")) or "—"
+            text = (t(lang, "start_not_subscribed_multi", channels=label)
+                    if len(channels) > 1 else
+                    t(lang, "start_not_subscribed", channel=label))
+            await message.answer(text, reply_markup=check_subscribe_kb(lang, channels=channels))
+            return
 
     await render_main_menu(message, app, lang, user)
 
@@ -81,10 +87,16 @@ async def cmd_start(message: Message, app: App) -> None:
 async def check_subscription(cb: CallbackQuery, app: App) -> None:
     """Obunani tekshirish tugmasi."""
     lang = (await app.users.get(cb.from_user.id) or {}).get("language", "uz")
-    channel, channel_id = await app.settings.get_channel()
-    if channel and not await is_subscribed(cb.bot, cb.from_user.id, channel, channel_id):
-        await cb.answer(t(lang, "start_not_subscribed", channel=channel), show_alert=True)
-        return
+    channels = await app.settings.get_channels()
+    if channels:
+        from src.subscription import missing_channels
+
+        missing = await missing_channels(cb.bot, cb.from_user.id, channels)
+        if missing:
+            label = ", ".join(
+                "@" + str(c.get("username")) for c in missing if c.get("username")) or "—"
+            await cb.answer(t(lang, "start_not_subscribed", channel=label), show_alert=True)
+            return
     user = await app.users.get(cb.from_user.id) or {}
     await app.users.set_subscribed(cb.from_user.id, True)
     app.sub_guard.forget(cb.from_user.id)

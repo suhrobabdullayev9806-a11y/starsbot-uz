@@ -333,13 +333,18 @@ def register_admin_api(server: FastAPI, app: App, admin_user) -> None:
         if not await admin_user(request):
             return deny()
         s = app.settings
+        pay_channel, _pay_id = await s.get_payment_channel()
         return {"ok": True, "star_price": await s.get_star_price(),
                 "post_price": await s.get_post_price(),
                 "post_min_stars": await s.get_post_min_stars(),
                 "min_stars": await s.get_min_stars(),
                 "percent": await s.get_percent(),
                 "active": await s.bot_active(),
-                "card": await s.payment_card()}
+                "card": await s.payment_card(),
+                "card_holder": await s.payment_card_holder(),
+                "pay_channel": pay_channel,
+                "channels": [c.get("username") or c.get("chat_id") or ""
+                             for c in await s.get_channels()]}
 
     @_S.post("/api/adm/settings")
     async def save_settings(request: Request):
@@ -357,6 +362,42 @@ def register_admin_api(server: FastAPI, app: App, admin_user) -> None:
             await a.set_percent(_num(b["percent"]))
         if "card" in b and str(b["card"]).strip():
             await a.set_card(str(b["card"]).strip()[:40])
+        if "card_holder" in b:
+            await app.settings.set_payment_card_holder(str(b["card_holder"]).strip()[:60])
+        if "pay_channel" in b:
+            raw = str(b["pay_channel"] or "").strip()
+            if not raw:
+                await app.settings.clear_payment_channel()
+            else:
+                uname = raw.replace("https://t.me/", "").replace("t.me/", "").lstrip("@").strip()
+                chat_id = ""
+                if uname and app.bot:
+                    try:
+                        chat = await app.bot.get_chat("@" + uname)
+                        chat_id = str(chat.id)
+                        uname = chat.username or uname
+                    except Exception:  # noqa: BLE001
+                        pass
+                if uname:
+                    await app.settings.set_payment_channel(uname, chat_id)
+        if "channels" in b:
+            items: list[dict] = []
+            seen: set[str] = set()
+            for part in str(b["channels"] or "").replace(";", ",").replace("\n", ",").split(","):
+                uname = part.strip().replace("https://t.me/", "").replace("t.me/", "").lstrip("@")
+                if not uname or uname.lower() in seen:
+                    continue
+                seen.add(uname.lower())
+                chat_id = ""
+                if app.bot:
+                    try:
+                        chat = await app.bot.get_chat("@" + uname)
+                        chat_id = str(chat.id)
+                        uname = chat.username or uname
+                    except Exception:  # noqa: BLE001
+                        pass
+                items.append({"username": uname, "chat_id": chat_id})
+            await app.settings.set_channels(items)
         if "active" in b and bool(b["active"]) != await app.settings.bot_active():
             await a.toggle_bot()
         return {"ok": True}

@@ -374,6 +374,9 @@ class SmmModule:
         return {"ok": True, "order_id": order_id, "price": price, "quantity": qty,
                 "balance": await self.users.balance_sum(user_id)}
 
+    async def get_order(self, order_id: int) -> dict | None:
+        return await self.db.fetch_one("SELECT * FROM smm_orders WHERE id = ?", (order_id,))
+
     # ------------------------------------------------------------------
     # Yakunlash / qaytarish (atomik)
     # ------------------------------------------------------------------

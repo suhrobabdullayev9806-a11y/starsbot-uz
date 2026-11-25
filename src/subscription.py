@@ -48,6 +48,18 @@ async def check_member(bot: Bot, user_id: int, channel: str, channel_id: str | N
     return member.status == "restricted" and bool(getattr(member, "is_member", False))
 
 
+async def missing_channels(bot: Bot, user_id: int, channels: list[dict]) -> list[dict]:
+    """Obuna bo'lmagan kanallar ro'yxati. Tekshirib bo'lmaydigan kanal o'tkaziladi."""
+    missing: list[dict] = []
+    for c in channels or []:
+        username = str(c.get("username") or "").lstrip("@")
+        chat_id = str(c.get("chat_id") or "")
+        if await check_member(bot, user_id, username, chat_id or None):
+            continue
+        missing.append(c)
+    return missing
+
+
 class SubscriptionGuard:
     _last_warn = 0.0
 
@@ -64,12 +76,12 @@ class SubscriptionGuard:
     async def ok(self, app, bot: Bot | None, user_id: int) -> bool:
         if bot is None or await app.is_admin(user_id):
             return True
-        channel, channel_id = await app.settings.get_channel()
-        if not channel and not channel_id:
+        channels = await app.settings.get_channels()
+        if not channels:
             return True
         if self._ok_until.get(user_id, 0.0) > time.monotonic():
             return True
-        if await check_member(bot, user_id, channel, channel_id):
+        if not await missing_channels(bot, user_id, channels):
             self._ok_until[user_id] = time.monotonic() + _CACHE_TTL
             if len(self._ok_until) > 50_000:
                 self._ok_until.clear()
@@ -115,9 +127,14 @@ class SubscriptionMiddleware(BaseMiddleware):
         from src.keyboards import check_subscribe_kb
 
         lang = (await app.users.get(user.id) or {}).get("language", "uz")
-        channel, channel_id = await app.settings.get_channel()
-        text = t(lang, "start_not_subscribed", channel=channel or "—")
-        kb = check_subscribe_kb(lang, channel)
+        channels = await app.settings.get_channels()
+        label = ", ".join(
+            "@" + str(c.get("username")) for c in channels if c.get("username")) or "—"
+        if len(channels) > 1:
+            text = t(lang, "start_not_subscribed_multi", channels=label)
+        else:
+            text = t(lang, "start_not_subscribed", channel=label)
+        kb = check_subscribe_kb(lang, channels=channels)
         try:
             if isinstance(event, CallbackQuery):
                 await event.answer("📢", show_alert=False)

@@ -414,7 +414,74 @@ class SettingsRepo:
         await self.set("channel", username.lstrip("@"))
         await self.set("channel_id", chat_id)
 
-    # --- To'lovlar kanali (barcha zakazlar joylashtiriladi) ---
+    # --- Majburiy obunalar: bir nechta kanal ---
+
+    async def get_channels(self) -> list[dict]:
+        """Majburiy obuna kanallari. Eski bitta `channel` sozlamasi bilan mos ishlaydi."""
+        raw = await self.get("required_channels", "")
+        items: list[dict] = []
+        if raw:
+            try:
+                data = json.loads(raw)
+            except (TypeError, ValueError):
+                data = []
+            if isinstance(data, list):
+                for x in data:
+                    if not isinstance(x, dict):
+                        continue
+                    u = str(x.get("username") or "").lstrip("@").strip()
+                    cid = str(x.get("chat_id") or "").strip()
+                    if u or cid:
+                        items.append({
+                            "username": u,
+                            "chat_id": cid,
+                            "title": str(x.get("title") or "").strip()[:120],
+                        })
+        if not items:
+            ch, ch_id = await self.get_channel()
+            if ch or ch_id:
+                items = [{"username": ch, "chat_id": ch_id, "title": ""}]
+        return items
+
+    async def set_channels(self, channels: list[dict]) -> None:
+        clean: list[dict] = []
+        seen: set[str] = set()
+        for c in channels or []:
+            c = c if isinstance(c, dict) else {}
+            u = str(c.get("username") or "").lstrip("@").strip()
+            cid = str(c.get("chat_id") or "").strip()
+            key = cid or u.lower()
+            if (not u and not cid) or key in seen:
+                continue
+            seen.add(key)
+            clean.append({
+                "username": u,
+                "chat_id": cid,
+                "title": str(c.get("title") or "").strip()[:120],
+            })
+        await self.set("required_channels", json.dumps(clean, ensure_ascii=False))
+        # Eski kodlar `channel` ni o'qiydi: birinchi kanalni u yerga ham yozamiz.
+        if clean:
+            await self.set_channel(clean[0]["username"], clean[0]["chat_id"])
+        else:
+            await self.set_channel("", "")
+
+    async def add_channel(self, username: str, chat_id: str = "", title: str = "") -> list[dict]:
+        items = await self.get_channels()
+        items.append({"username": username, "chat_id": chat_id, "title": title})
+        await self.set_channels(items)
+        return await self.get_channels()
+
+    async def remove_channel(self, key: str) -> list[dict]:
+        key = str(key or "").lstrip("@").strip().lower()
+        items = await self.get_channels()
+        items = [c for c in items
+                 if key not in {str(c.get("username") or "").lower(),
+                                str(c.get("chat_id") or "").lower()}]
+        await self.set_channels(items)
+        return await self.get_channels()
+
+    # --- Buyurtmalar kanali (barcha buyurtmalar joylashtiriladi) ---
 
     async def get_payment_channel(self) -> tuple[str, str]:
         """(username, chat_id) qaytaradi."""

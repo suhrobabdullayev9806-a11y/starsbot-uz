@@ -29,8 +29,14 @@ async def smm_menu_fallback(cb: CallbackQuery, app: App) -> None:
 
 
 async def notify_smm_result(bot, app: App, order: dict, outcome: str) -> None:
-    """Buyurtma yakunlanganda foydalanuvchiga xabar (provayder xatosi 'failed' da xabarsiz:
-    foydalanuvchi buni mini-appda darhol ko'radi)."""
+    """Buyurtma yakunlanganda foydalanuvchiga va buyurtmalar kanaliga xabar."""
+    from src.handlers._helpers import notify_smm_channel
+
+    if bot is not None:
+        try:
+            await notify_smm_channel(bot, app, order, outcome)
+        except Exception:  # noqa: BLE001
+            pass
     if bot is None or outcome == "failed":
         return
     lang = (await app.users.get(order["user_id"]) or {}).get("language", "uz")

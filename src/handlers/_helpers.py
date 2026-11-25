@@ -120,18 +120,31 @@ async def notify_admins_media(bot: Bot, photo_id: str, caption: str, app, kb=Non
     await notify_admins_content(bot, "photo", photo_id, caption, app, kb)
 
 
-async def notify_payments_channel(bot: Bot, app, order_id: int) -> None:
-    """Yangi zakaz haqida to'lovlar kanaliga xabar jo'natadi (sozlangan bo'lsa).
+_STATUS_HEAD = {
+    "pending": "🆕 <b>YANGI BUYURTMA</b>",
+    "processing": "🔄 <b>BUYURTMA JARAYONDA</b>",
+    "done": "✅ <b>BUYURTMA BAJARILDI</b>",
+    "rejected": "❌ <b>BUYURTMA RAD ETILDI</b>",
+    "failed": "⚠️ <b>BUYURTMA XATO</b>",
+}
 
-    Admin panel: Sozlamalar -> To'lovlar kanali sozlash.
+
+async def _channel_target(app) -> str:
+    username, chat_id = await app.settings.get_payment_channel()
+    return chat_id or (f"@{username}" if username else "")
+
+
+async def notify_payments_channel(bot: Bot, app, order_id: int) -> None:
+    """Buyurtma haqida buyurtmalar kanaliga xabar jo'natadi (sozlangan bo'lsa).
+
+    Admin panel: Sozlamalar -> Buyurtmalar kanali.
     """
     order = await app.orders.get(order_id)
     if not order:
         return
-    username, chat_id = await app.settings.get_payment_channel()
-    if not username and not chat_id:
+    target = await _channel_target(app)
+    if not target:
         return
-    target = chat_id or f"@{username}"
     try:
         user = await app.users.get(order["user_id"]) or {}
         uid = order["user_id"]
@@ -151,8 +164,9 @@ async def notify_payments_channel(bot: Bot, app, order_id: int) -> None:
         stars = float(order["stars_amount"])
         bio = (f"<b>{int(stars)} ⭐</b>" if stars and order["type"] not in ("nft", "uc") else
                f"<b>{float(order['price_amount']):,.0f} so'm</b>")
+        head = _STATUS_HEAD.get(str(order["status"]), "🆕 <b>BUYURTMA</b>")
         text = (
-            f"🛒 <b>YANGI ZAKAZ №{order['id']}</b>\n"
+            f"{head} №{order['id']}\n"
             f"👤 <b>{uname}</b> (id: <code>{uid}</code>)\n"
             f"📦 Tur: {type_map.get(order['type'], order['type'])} — {bio}\n"
             f"💰 Narx: <b>{float(order['price_amount']):,.0f}</b> so'm\n"
@@ -162,6 +176,48 @@ async def notify_payments_channel(bot: Bot, app, order_id: int) -> None:
         if order.get("note"):
             text += f"📝 {html.escape(str(order['note'])[:120])}\n"
         text += f"📌 Status: <b>{order['status']}</b>"
+        await bot.send_message(target, text, disable_web_page_preview=True)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+async def notify_smm_channel(bot: Bot, app, order: dict, event: str = "new") -> None:
+    """SMM buyurtmasi (yangi yoki yakuniy holat) haqida buyurtmalar kanaliga yozadi."""
+    target = await _channel_target(app)
+    if not target or not order:
+        return
+    try:
+        uid = int(order["user_id"])
+        user = await app.users.get(uid) or {}
+        uname = html.escape(str(user.get("username") or user.get("first_name") or uid))
+        if user and not user.get("username"):
+            uname = f'<a href="tg://user?id={uid}">{uname}</a>'
+        else:
+            uname = "@" + uname
+        if event == "new":
+            head = "🆕 <b>YANGI SMM BUYURTMA</b>"
+        elif event == "completed":
+            head = "✅ <b>SMM BUYURTMA BAJARILDI</b>"
+        elif event == "partial":
+            head = "⚠️ <b>SMM BUYURTMA QISMAN BAJARILDI</b>"
+        elif event in ("canceled", "failed"):
+            head = "❌ <b>SMM BUYURTMA BEKOR QILINDI</b>"
+        else:
+            head = "🔄 <b>SMM BUYURTMA</b>"
+        text = (
+            f"{head} №{order['id']}\n"
+            f"👤 <b>{uname}</b> (id: <code>{uid}</code>)\n"
+            f"🚀 {html.escape(str(order['service_name']))}\n"
+            f"🔢 Miqdor: <b>{int(order['quantity']):,}</b> ta\n"
+            f"🔗 <code>{html.escape(str(order['link'])[:180])}</code>\n"
+            f"💰 Narx: <b>{float(order['price']):,.0f}</b> so'm\n"
+            f"🕓 Vaqt: <code>{order['created_at']}</code>\n"
+            f"📌 Status: <b>{html.escape(str(order.get('status') or ''))}</b>"
+        )
+        if order.get("provider_order"):
+            text += f"\n🆔 Provayder: <code>{html.escape(str(order['provider_order'])[:60])}</code>"
+        if float(order.get("refunded") or 0) > 0:
+            text += f"\n💸 Qaytarilgan: <b>{float(order['refunded']):,.0f}</b> so'm"
         await bot.send_message(target, text, disable_web_page_preview=True)
     except Exception:  # noqa: BLE001
         pass

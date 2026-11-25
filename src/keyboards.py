@@ -116,13 +116,27 @@ def back_kb(lang: str, target: str = "menu:main") -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def check_subscribe_kb(lang: str, channel: str = "") -> InlineKeyboardMarkup:
-    """Majburiy obuna: kanalga o'tish + tekshirish."""
+def check_subscribe_kb(lang: str, channel: str = "",
+                       channels: list[dict] | None = None) -> InlineKeyboardMarkup:
+    """Majburiy obuna: har bir kanalga o'tish + tekshirish."""
     kb = InlineKeyboardBuilder()
-    channel = (channel or "").lstrip("@").strip()
-    if channel:
-        kb.row(InlineKeyboardButton(
-            text=t(lang, "sub_join"), url=f"https://t.me/{channel}", style=BLUE))
+    items: list[dict] = []
+    if channels is not None:
+        items = [c for c in channels if isinstance(c, dict)]
+    elif channel:
+        items = [{"username": channel}]
+    for c in items:
+        username = str(c.get("username") or "").lstrip("@").strip()
+        chat_id = str(c.get("chat_id") or "").strip()
+        title = str(c.get("title") or "").strip() or (f"@{username}" if username else "")
+        if username:
+            url = f"https://t.me/{username}"
+        elif chat_id.startswith("-100"):
+            url = f"https://t.me/c/{chat_id[4:]}"
+        else:
+            continue
+        label = t(lang, "sub_join") if len(items) == 1 else f"📢 {title or 'Kanal'}"
+        kb.row(InlineKeyboardButton(text=label[:64], url=url, style=BLUE))
     kb.row(btn(t(lang, "check_subscribe"), "check:sub", GREEN))
     return kb.as_markup()
 

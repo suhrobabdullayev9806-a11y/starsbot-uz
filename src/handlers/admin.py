@@ -513,7 +513,7 @@ async def save_channel(message: Message, app: App, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "admin:set_pay_channel")
 async def admin_set_pay_channel(cb: CallbackQuery, app: App, state: FSMContext) -> None:
-    """To'lovlar kanali sozlash (barcha zakazlar shu yerga yoziladi)."""
+    """Buyurtmalar kanali sozlash (barcha buyurtmalar shu yerga yoziladi)."""
     if not await _is_admin(app, cb.from_user.id):
         return
     await edit_or_send(cb,
@@ -542,7 +542,7 @@ async def save_pay_channel(message: Message, app: App, state: FSMContext) -> Non
     await app.settings.set_payment_channel(username, chat_id)
     await message.answer(
         f"✅ To'lovlar kanali sozlandi: @{username}\n"
-        f"Endi barcha yangi zakazlar shu kanalga yuboriladi."
+        f"Endi barcha yangi buyurtmalar shu kanalga yuboriladi."
         + (f"\nID: {chat_id}" if chat_id else "\n⚠️ Botni kanalga admin qiling!")
     )
     await state.clear()

@@ -16,6 +16,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "start_not_subscribed": "⚠️ <b>Botdan foydalanish uchun kanalimizga obuna bo'lishingiz kerak!</b>\n\n"
                                 "Kanal: @{channel}\n\n"
                                 "Obuna bo'lgach \"✅ Tekshirish\" tugmasini bosing.",
+        "start_not_subscribed_multi": "⚠️ <b>Botdan foydalanish uchun quyidagi kanallarga obuna bo'ling!</b>\n\n"
+                                      "Kanallar: {channels}\n\n"
+                                      "Obuna bo'lgach \"✅ Tekshirish\" tugmasini bosing.",
         "start_bot_inactive": "⛔️ Bot vaqtincha ishlamayapti. Iltimos keyinroq urinib ko'ring.",
         "check_subscribe": "✅ Tekshirish",
         "back": "◀️ Orqaga",
@@ -296,6 +299,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
                  "👇 Choose a section below:",
         "start_not_subscribed": "⚠️ <b>You must join our channel to use the bot!</b>\n\n"
                                 "Channel: @{channel}\n\nAfter subscribing press \"✅ Check\".",
+        "start_not_subscribed_multi": "⚠️ <b>Please join all channels below to use the bot!</b>\n\n"
+                                      "Channels: {channels}\n\nAfter subscribing press \"✅ Check\".",
         "start_bot_inactive": "⛔️ Bot temporarily unavailable. Try later.",
         "check_subscribe": "✅ Check",
         "back": "◀️ Back",
@@ -510,6 +515,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
                  "👇 Выберите раздел:",
         "start_not_subscribed": "⚠️ <b>Для использования бота нужно подписаться на канал!</b>\n\n"
                                 "Канал: @{channel}\n\nПосле подписки нажмите «✅ Проверить».",
+        "start_not_subscribed_multi": "⚠️ <b>Для использования бота подпишитесь на все каналы!</b>\n\n"
+                                      "Каналы: {channels}\n\nПосле подписки нажмите «✅ Проверить».",
         "start_bot_inactive": "⛔️ Бот временно недоступен. Попробуйте позже.",
         "check_subscribe": "✅ Проверить",
         "back": "◀️ Назад",
