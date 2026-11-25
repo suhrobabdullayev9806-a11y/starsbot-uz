@@ -35,8 +35,10 @@ git push -u origin main
 | Kalit | Izoh |
 |---|---|
 | `REQUIRED_CHANNEL`, `REQUIRED_CHANNEL_ID` | Majburiy obuna kanali (bot kanalga admin bo'lsin) |
-| `PAYMENT_CARD` | To'lov kartasi |
+| `PAYMENT_CARD`, `PAYMENT_CARD_HOLDER` | To'lov kartasi va egasi (avto-to'lov uchun majburiy) |
 | `PAYMENTS_PROVIDER_TOKEN` | Ixtiyoriy |
+| `SMM_API_URL`, `SMM_API_KEY`, `SMM_RATE`, `SMM_MARKUP` | SMM provayder. Ulanganda **barcha xizmatlar avtomatik import** qilinadi (panelda ham mumkin, lekin free rejada env ishonchliroq) |
+| `UC_LOOKUP_URL`, `UC_LOOKUP_KEY` | PUBG nickname tekshiruvi (ixtiyoriy) |
 | `STARS_API_BASE_URL`, `STARS_API_KEY` | @Apilarimbot API |
 | `API_CALLBACK_SECRET` | Uzun tasodifiy kalit; API provayderga ham shuni bering |
 
@@ -50,7 +52,9 @@ Admin panel: `https://<servis>.onrender.com/admin`
 Bot SQLite ishlatadi. Render'da fayl tizimi **vaqtinchalik**, faqat **Persistent Disk** saqlanadi.
 - **Starter (pullik) + Disk** (`render.yaml` dagi default): baza deploy/restartdan keyin ham saqlanadi. ✅
 - **Free tarif**: disk yo'q → har deploy, restart va uxlab-uyg'onishda **baza (foydalanuvchilar, balans,
-  buyurtmalar, ulangan akkauntlar) o'chadi**. Faqat sinov uchun.
+  buyurtmalar, ulangan akkauntlar, SMM/NFT/UC sozlamalari) o'chadi**. Faqat sinov uchun.
+  Muhim kalitlarni (`PAYMENT_CARD`, `SMM_API_URL`, `SMM_API_KEY`, `UC_LOOKUP_URL`) **env orqali** bering:
+  bot ularni har ishga tushishda bazaga qayta yozadi va SMM xizmatlarini qayta import qiladi.
   Free'da `render.yaml` da `plan: free` yozing, `disk:` blokini va `DB_PATH` qatorini olib tashlang;
   servis uxlab qolmasligi uchun `KEEP_ALIVE` default yoqiq (o'zini har 10 daqiqada ping qiladi).
 

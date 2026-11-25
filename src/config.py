@@ -21,6 +21,13 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
+def _float_env(name: str, default: float) -> float:
+    try:
+        return float((os.getenv(name) or "").strip() or default)
+    except ValueError:
+        return default
+
+
 class Settings(BaseModel):
     """Barcha bot sozlamalari bitta joyda to'plangan."""
 
@@ -54,6 +61,18 @@ class Settings(BaseModel):
     stars_api_base_url: str = ""
     stars_api_key: str = ""
     api_callback_secret: str = ""
+
+    # --- SMM provayder (ixtiyoriy: env dan boshlang'ich sozlash) ---
+    # Render bepul rejada baza har restartda tozalanadi, shuning uchun API
+    # kalitini env orqali berish ishonchliroq: panel ham, avto-import ham ishlaydi.
+    smm_api_url: str = ""
+    smm_api_key: str = ""
+    smm_rate: float = 1.0
+    smm_markup: float = 30.0
+
+    # --- PUBG UC nickname provayderi (ixtiyoriy) ---
+    uc_lookup_url: str = ""
+    uc_lookup_key: str = ""
 
     # --- Ma'lumotlar bazasi ---
     db_path: str = "data/stars.db"
@@ -161,6 +180,12 @@ class Settings(BaseModel):
             stars_api_base_url=os.getenv("STARS_API_BASE_URL", ""),
             stars_api_key=os.getenv("STARS_API_KEY", ""),
             api_callback_secret=os.getenv("API_CALLBACK_SECRET", ""),
+            smm_api_url=os.getenv("SMM_API_URL", "").strip().rstrip("/"),
+            smm_api_key=os.getenv("SMM_API_KEY", "").strip(),
+            smm_rate=_float_env("SMM_RATE", 1.0),
+            smm_markup=_float_env("SMM_MARKUP", 30.0),
+            uc_lookup_url=os.getenv("UC_LOOKUP_URL", "").strip(),
+            uc_lookup_key=os.getenv("UC_LOOKUP_KEY", "").strip(),
             db_path=os.getenv("DB_PATH", "data/stars.db").strip() or "data/stars.db",
             webapp_host=os.getenv("WEBAPP_HOST", "0.0.0.0").strip() or "0.0.0.0",
             webapp_port=port,

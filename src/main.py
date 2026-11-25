@@ -256,6 +256,29 @@ async def main() -> None:
         if cfg.payment_card and not await app.settings.payment_card():
             await app.settings.set_payment_card(cfg.payment_card)
 
+        # Render bepul rejada baza restartda tozalanadi: muhim API sozlamalarini
+        # env dan tiklaymiz, aks holda SMM/UC provayderi har deployda yo'qoladi.
+        if cfg.smm_api_url or cfg.smm_api_key:
+            cur = await app.settings.get_smm()
+            seed = {}
+            if cfg.smm_api_url and not cur["url"]:
+                seed["url"] = cfg.smm_api_url
+            if cfg.smm_api_key and not cur["key"]:
+                seed["key"] = cfg.smm_api_key
+            if seed:
+                if not cur["url"] and cfg.smm_rate:
+                    seed["rate"] = cfg.smm_rate
+                if not cur["url"] and cfg.smm_markup:
+                    seed["markup"] = cfg.smm_markup
+                await app.settings.set_smm(**seed)
+                logger.info("SMM API sozlamalari env dan o'rnatildi: %s", cfg.smm_api_url)
+        if cfg.uc_lookup_url:
+            cur = await app.settings.get_uc()
+            if not cur["lookup_url"]:
+                await app.settings.set_uc(
+                    lookup_url=cfg.uc_lookup_url, lookup_key=cfg.uc_lookup_key)
+                logger.info("UC nickname provayderi env dan o'rnatildi")
+
         # AVTO-TO'LOV: natijalarni foydalanuvchiga yuborish + fon tekshiruvi + bank tinglovchi
         from src.bank_listener import run_bank_listener
         from src.handlers.wallet import notify_topup_result
