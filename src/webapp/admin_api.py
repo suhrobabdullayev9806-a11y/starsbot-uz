@@ -384,16 +384,27 @@ def register_admin_api(server: FastAPI, app: App, admin_user) -> None:
             items: list[dict] = []
             seen: set[str] = set()
             for part in str(b["channels"] or "").replace(";", ",").replace("\n", ",").split(","):
-                uname = part.strip().replace("https://t.me/", "").replace("t.me/", "").lstrip("@")
-                if not uname or uname.lower() in seen:
+                raw = part.strip().replace("https://t.me/", "").replace("t.me/", "").lstrip("@")
+                if not raw or raw.lower() in seen:
                     continue
-                seen.add(uname.lower())
-                chat_id = ""
-                if app.bot:
+                seen.add(raw.lower())
+                uname, chat_id = raw, ""
+                numeric = raw.lstrip("-")
+                if numeric.isdigit():
+                    uname = ""
+                    chat_id = raw
+                    if app.bot:
+                        try:
+                            chat = await app.bot.get_chat(int(raw))
+                            chat_id = str(chat.id)
+                            uname = chat.username or ""
+                        except Exception:  # noqa: BLE001
+                            pass
+                elif app.bot:
                     try:
-                        chat = await app.bot.get_chat("@" + uname)
+                        chat = await app.bot.get_chat("@" + raw)
                         chat_id = str(chat.id)
-                        uname = chat.username or uname
+                        uname = chat.username or raw
                     except Exception:  # noqa: BLE001
                         pass
                 items.append({"username": uname, "chat_id": chat_id})
