@@ -25,6 +25,20 @@ PLATFORMS: dict[str, str] = {
     "telegram": "Telegram", "instagram": "Instagram", "tiktok": "TikTok",
     "youtube": "YouTube", "facebook": "Facebook", "x": "X (Twitter)", "other": "Boshqa",
 }
+# Provayder narxi qaysi valyutada. UZS bo'lsa kurs 1 ga majburlanadi.
+CURRENCIES = ("AUTO", "UZS", "USD", "RUB")
+
+
+def normalize_currency(raw: object) -> str:
+    """'$', 'so'm', 'rur' kabi javoblarni UZS/USD/RUB ga keltiradi."""
+    s = str(raw or "").strip().upper()
+    if s in ("UZS", "UZB", "SUM", "SO'M", "SOM", "СУМ"):
+        return "UZS"
+    if s in ("USD", "$", "USDT", "ДОЛЛАР"):
+        return "USD"
+    if s in ("RUB", "RUR", "₽", "РУБ", "РУБЛЬ"):
+        return "RUB"
+    return ""
 _PLATFORM_RULES = [
     ("telegram", re.compile(r"telegram|\btg\b|t\.me", re.I)),
     ("instagram", re.compile(r"instagram|\big\b|insta\b|reels", re.I)),
@@ -101,6 +115,29 @@ class SmmModule:
     @staticmethod
     def auto_price(cost: float, rate: float, markup: float) -> float:
         return float(math.ceil(float(cost) * float(rate) * (1 + float(markup) / 100.0) - 1e-9))
+
+    @staticmethod
+    def effective_rate(s: dict) -> float:
+        """Provayder narxi -> so'm kursi. UZS da har doim 1 (xato narx bo'lmasligi uchun)."""
+        cur = str(s.get("currency") or "AUTO").upper()
+        if cur == "UZS":
+            return 1.0
+        if cur == "USD":
+            return float(s.get("usd_rate") or s.get("rate") or 1.0)
+        if cur == "RUB":
+            return float(s.get("rub_rate") or s.get("rate") or 1.0)
+        return float(s.get("rate") or 1.0)
+
+    async def detect_currency(self, save: bool = True) -> str:
+        """Provayder balans javobidagi valyutani aniqlaydi (USD/RUB/UZS)."""
+        try:
+            bal = await self.provider.balance()
+        except Exception:  # noqa: BLE001
+            return ""
+        cur = normalize_currency((bal or {}).get("currency") if isinstance(bal, dict) else "")
+        if cur and save:
+            await self.settings.set_smm(currency=cur)
+        return cur
 
     # ------------------------------------------------------------------
     # Katalog
@@ -205,7 +242,7 @@ class SmmModule:
         if svc and float(svc["cost"]) > 0:
             await self.db.execute(
                 "UPDATE smm_services SET price = ?, auto_price = 1 WHERE id = ?",
-                (self.auto_price(svc["cost"], s["rate"], s["markup"]), service_id))
+                (self.auto_price(svc["cost"], self.effective_rate(s), s["markup"]), service_id))
 
     async def delete_service(self, service_id: int) -> bool:
         # Buyurtmalar tarixi service_name ni o'zida saqlaydi, shuning uchun o'chirish xavfsiz
@@ -217,10 +254,44 @@ class SmmModule:
         s = await self.settings.get_smm()
         rows = await self.db.fetch_all(
             "SELECT id, cost FROM smm_services WHERE auto_price = 1 AND cost > 0")
-        data = [(self.auto_price(r["cost"], s["rate"], s["markup"]), r["id"]) for r in rows]
+        rate = self.effective_rate(s)
+        data = [(self.auto_price(r["cost"], rate, s["markup"]), r["id"]) for r in rows]
         if data:
             await self.db.execute_many("UPDATE smm_services SET price = ? WHERE id = ?", data)
         return len(data)
+
+    async def pricing_audit(self) -> dict:
+        """Narxlar sog'lomligini tekshiradi: kurs valyutaga mos emasligini aniqlaydi.
+
+        Masalan provayder so'mda, lekin kurs 12 600 qilib qo'yilgan bo'lsa,
+        1000 ta xizmat narxi o'rtacha yarim milliondan oshib ketadi.
+        """
+        s = await self.settings.get_smm()
+        rate = self.effective_rate(s)
+        rows = await self.db.fetch_all(
+            "SELECT cost FROM smm_services WHERE cost > 0 ORDER BY cost")
+        prices = sorted(self.auto_price(float(r["cost"]), rate, s["markup"]) for r in rows)
+        n = len(prices)
+        median = prices[n // 2] if n else 0.0
+        warning = ""
+        # 1000 ta uchun 500 000 so'mdan qimmat o'rtacha narx O'zbekiston bozori uchun
+        # deyarli har doim valyuta/kurs xatosidan darak beradi (USD kursi UZS ga qo'llangan).
+        if rate > 1000 and median > 500_000:
+            warning = "rate_mismatch"
+        return {"currency": s["currency"], "rate": rate, "markup": s["markup"],
+                "services": n, "median_price": median,
+                "max_price": prices[-1] if n else 0.0, "warning": warning}
+
+    async def autofix_auto_currency(self) -> str:
+        """AUTO rejimda aniq kurs xatosi bo'lsa, valyutani UZS ga o'giradi."""
+        s = await self.settings.get_smm()
+        if s["currency"] != "AUTO":
+            return ""
+        audit = await self.pricing_audit()
+        if audit["warning"] != "rate_mismatch":
+            return ""
+        await self.settings.set_smm(currency="UZS")
+        return "UZS"
 
     # --- provayderdan import ---
     async def provider_categories(self, force: bool = False) -> list[dict]:
@@ -250,10 +321,11 @@ class SmmModule:
         admin qo'lda qo'ygan narx hech qachon o'zgarmaydi.
         """
         s = await self.settings.get_smm()
+        rate = self.effective_rate(s)
         raw = await self._provider_services(force=categories is None)
         wanted = None if categories is None else {c.strip() for c in categories if c and c.strip()}
         if wanted is not None and not wanted:
-            return {"added": 0, "updated": 0, "skipped": 0}
+            return {"added": 0, "updated": 0, "skipped": 0, "autofixed": ""}
         have = {
             r["provider_id"]: r
             for r in await self.db.fetch_all(
@@ -280,7 +352,7 @@ class SmmModule:
             mn = max(1, _int(x.get("min"), 10))
             mx = max(mn, _int(x.get("max"), 10000))
             old = have.get(pid)
-            auto_price = self.auto_price(cost, s["rate"], s["markup"])
+            auto_price = self.auto_price(cost, rate, s["markup"])
             if old:
                 auto = int(old.get("auto_price") or 0)
                 price = auto_price if auto else float(old.get("price") or 0)
@@ -299,7 +371,13 @@ class SmmModule:
             await self.db.execute_many(
                 "UPDATE smm_services SET cost=?, name=?, category=?, min_qty=?, max_qty=?, "
                 " price=? WHERE id=?", updates)
-        return {"added": added, "updated": updated, "skipped": skipped}
+        # Avto rejimda valyuta aniqlanmagan bo'lsa-yu, narxlar aniq shishgan bo'lsa,
+        # UZS ga o'tkazamiz va avto-narxlarni qayta hisoblaymiz.
+        autofixed = await self.autofix_auto_currency()
+        if autofixed:
+            await self.reprice_all()
+        return {"added": added, "updated": updated, "skipped": skipped,
+                "autofixed": autofixed}
 
     # ------------------------------------------------------------------
     # Buyurtma berish

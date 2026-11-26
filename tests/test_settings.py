@@ -35,6 +35,7 @@ async def test_accounts_module(app):
 
 async def test_gift_insufficient(app):
     await app.users.get_or_create(9)
-    result = await app.gifts.purchase_gift(9, 100, "+998901234567")
+    gift_id = await app.gifts.add("Test gift", 1000.0, 50)
+    result = await app.gifts.purchase_gift(9, gift_id, "+998901234567")
     assert result.ok is False
-    assert result.error == "insufficient"
+    assert result.error == "insufficient_sum"

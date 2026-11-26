@@ -185,6 +185,8 @@ async def smm_auto_import(app: App) -> None:
         s = await app.settings.get_smm()
         if not (s["enabled"] and s["url"] and s["key"]):
             return
+        if s["currency"] == "AUTO":
+            await app.smm.detect_currency()
         res = await app.smm.import_services()
         logger.info("SMM avto-import: qo'shildi=%s, yangilandi=%s, o'tkazildi=%s",
                     res.get("added"), res.get("updated"), res.get("skipped"))
@@ -258,20 +260,27 @@ async def main() -> None:
 
         # Render bepul rejada baza restartda tozalanadi: muhim API sozlamalarini
         # env dan tiklaymiz, aks holda SMM/UC provayderi har deployda yo'qoladi.
-        if cfg.smm_api_url or cfg.smm_api_key:
+        if cfg.smm_api_url or cfg.smm_api_key or any(
+                os.getenv(k, "").strip() for k in
+                ("SMM_CURRENCY", "SMM_RATE", "SMM_USD_RATE", "SMM_RUB_RATE", "SMM_MARKUP")):
             cur = await app.settings.get_smm()
-            seed = {}
+            seed: dict = {}
             if cfg.smm_api_url and not cur["url"]:
                 seed["url"] = cfg.smm_api_url
             if cfg.smm_api_key and not cur["key"]:
                 seed["key"] = cfg.smm_api_key
+            # Faqat env da ANIQ berilgan qiymatlarni va DB da hali yo'qlarini yozamiz.
+            for env_name, db_key in (
+                ("SMM_CURRENCY", "smm_currency"), ("SMM_RATE", "smm_rate"),
+                ("SMM_USD_RATE", "smm_usd_rate"), ("SMM_RUB_RATE", "smm_rub_rate"),
+                ("SMM_MARKUP", "smm_markup"),
+            ):
+                raw = os.getenv(env_name, "").strip()
+                if raw and not (await app.settings.get(db_key, "")).strip():
+                    seed[db_key.removeprefix("smm_")] = raw
             if seed:
-                if not cur["url"] and cfg.smm_rate:
-                    seed["rate"] = cfg.smm_rate
-                if not cur["url"] and cfg.smm_markup:
-                    seed["markup"] = cfg.smm_markup
                 await app.settings.set_smm(**seed)
-                logger.info("SMM API sozlamalari env dan o'rnatildi: %s", cfg.smm_api_url)
+                logger.info("SMM sozlamalari env dan o'rnatildi: %s", cfg.smm_api_url or "mavjud")
         if cfg.uc_lookup_url:
             cur = await app.settings.get_uc()
             if not cur["lookup_url"]:

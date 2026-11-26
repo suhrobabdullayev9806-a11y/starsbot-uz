@@ -64,6 +64,15 @@ def register_admin_api(server: FastAPI, app: App, admin_user) -> None:
         except Exception:  # noqa: BLE001
             return {}
 
+    async def admin_roster(me: int) -> dict:
+        """Asosiy (.env) va panel orqali qo'shilgan adminlar."""
+        primary: list[int] = []
+        for uid in (app.cfg.super_admin_id, *app.cfg.admin_ids):
+            if uid and uid not in primary:
+                primary.append(uid)
+        extra = [u for u in await app.settings.get_extra_admins() if u not in primary]
+        return {"primary": primary, "extra": extra, "me": me}
+
     # ---------- Umumiy ko'rinish ----------
     @_S.get("/api/adm/overview")
     async def overview(request: Request):
@@ -327,10 +336,55 @@ def register_admin_api(server: FastAPI, app: App, admin_user) -> None:
             return {"ok": False, "error": "insufficient"}
         return {"ok": True, "balance": res}
 
+    # ---------- Adminlar ----------
+    @_S.get("/api/adm/admins")
+    async def admins_list(request: Request):
+        me = await admin_user(request)
+        if not me:
+            return deny()
+        return {"ok": True, **await admin_roster(me)}
+
+    @_S.post("/api/adm/admins")
+    async def admins_add(request: Request):
+        if not await admin_user(request):
+            return deny()
+        b = await body_of(request)
+        try:
+            uid = int(str(b.get("user_id", "")).strip())
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "bad_id"}
+        if uid <= 0:
+            return {"ok": False, "error": "bad_id"}
+        roster = await admin_roster(0)
+        if uid in roster["primary"]:
+            return {"ok": False, "error": "primary"}
+        added = await app.settings.add_extra_admin(uid)
+        return {"ok": True, "added": added, "user_id": uid}
+
+    @_S.post("/api/adm/admins/remove")
+    async def admins_remove(request: Request):
+        me = await admin_user(request)
+        if not me:
+            return deny()
+        b = await body_of(request)
+        try:
+            uid = int(str(b.get("user_id", "")).strip())
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "bad_id"}
+        if uid == me:
+            return {"ok": False, "error": "self"}
+        roster = await admin_roster(me)
+        if uid in roster["primary"]:
+            return {"ok": False, "error": "primary"}
+        removed = await app.settings.remove_extra_admin(uid)
+        return {"ok": removed, "removed": removed,
+                "error": "" if removed else "not_found"}
+
     # ---------- Sozlamalar ----------
     @_S.get("/api/adm/settings")
     async def get_settings(request: Request):
-        if not await admin_user(request):
+        me = await admin_user(request)
+        if not me:
             return deny()
         s = app.settings
         pay_channel, _pay_id = await s.get_payment_channel()
@@ -344,7 +398,8 @@ def register_admin_api(server: FastAPI, app: App, admin_user) -> None:
                 "card_holder": await s.payment_card_holder(),
                 "pay_channel": pay_channel,
                 "channels": [c.get("username") or c.get("chat_id") or ""
-                             for c in await s.get_channels()]}
+                             for c in await s.get_channels()],
+                "admins": await admin_roster(me)}
 
     @_S.post("/api/adm/settings")
     async def save_settings(request: Request):

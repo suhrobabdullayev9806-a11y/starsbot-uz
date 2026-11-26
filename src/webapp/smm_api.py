@@ -268,8 +268,12 @@ def register_smm_api(server: FastAPI, app: App, any_user, admin_user) -> None:
             return deny()
         s = await app.settings.get_smm()
         return {"ok": True, "url": s["url"], "key_set": bool(s["key"]), "key_hint": mask(s["key"]),
-                "rate": s["rate"], "markup": s["markup"], "min_price": s["min_price"],
+                "currency": s["currency"], "rate": s["rate"],
+                "usd_rate": s["usd_rate"], "rub_rate": s["rub_rate"],
+                "effective_rate": smm.effective_rate(s),
+                "markup": s["markup"], "min_price": s["min_price"],
                 "enabled": s["enabled"], "public_api": s["public_api"],
+                "audit": await smm.pricing_audit(),
                 "stats": await smm.stats()}
 
     @server.post("/api/adm/smm/settings")
@@ -286,29 +290,51 @@ def register_smm_api(server: FastAPI, app: App, any_user, admin_user) -> None:
             upd["url"] = url
         if str(b.get("key", "")).strip():      # bo'sh yuborilsa eski kalit saqlanadi
             upd["key"] = str(b["key"]).strip()
-        for k in ("rate", "markup", "min_price"):
+        if "currency" in b:
+            cur = str(b["currency"]).strip().upper()
+            if cur not in ("AUTO", "UZS", "USD", "RUB"):
+                return {"ok": False, "error": "bad_currency"}
+            upd["currency"] = cur
+        for k in ("rate", "markup", "min_price", "usd_rate", "rub_rate"):
             if k in b:
                 v = _num(b[k], -1)
-                if v < 0 or (k == "rate" and v == 0):
+                if v < 0 or (k in ("rate", "usd_rate", "rub_rate") and v == 0):
                     return {"ok": False, "error": "bad_number"}
                 upd[k] = v
         for k in ("enabled", "public_api"):
             if k in b:
                 upd[k] = bool(b[k])
         await app.settings.set_smm(**upd)
+        current = await app.settings.get_smm()
+        detected = ""
+        # Avto rejimda provayder balansidagi valyutani aniqlaymiz: UZS bo'lsa
+        # kurs 1 bo'ladi va narxlar sun'iy ravishda qimmatlashmaydi.
+        if current["url"] and current["key"] and current["currency"] == "AUTO":
+            detected = await smm.detect_currency()
+            if detected:
+                current = await app.settings.get_smm()
         repriced = 0
-        if "rate" in upd or "markup" in upd:
+        if (any(k in upd for k in ("rate", "markup", "currency", "usd_rate", "rub_rate"))
+                or detected):
             repriced = await smm.reprice_all()
         # API ulanishi saqlanganda barcha xizmatlar avtomatik import qilinadi.
         imported = None
-        current = await app.settings.get_smm()
         if current["url"] and current["key"] and (
-                any(k in upd for k in ("url", "key", "enabled")) or "url" in b or "key" in b):
+                any(k in upd for k in ("url", "key", "enabled", "currency", "usd_rate", "rub_rate"))
+                or "url" in b or "key" in b):
             try:
                 imported = await smm.import_services()
             except SmmError as exc:
                 imported = {"error": str(exc)}
-        return {"ok": True, "repriced": repriced, "imported": imported}
+        autofixed = str((imported or {}).get("autofixed") or "") if isinstance(imported, dict) else ""
+        if not autofixed:
+            autofixed = await smm.autofix_auto_currency()
+            if autofixed:
+                repriced = await smm.reprice_all()
+        current = await app.settings.get_smm()
+        return {"ok": True, "repriced": repriced, "imported": imported,
+                "currency": current["currency"], "detected": detected,
+                "autofixed": autofixed, "audit": await smm.pricing_audit()}
 
     @server.post("/api/adm/smm/test")
     @_safe
@@ -319,7 +345,18 @@ def register_smm_api(server: FastAPI, app: App, any_user, admin_user) -> None:
             bal = await app.smm_provider.balance()
         except SmmError as exc:
             return {"ok": False, "error": "provider", "detail": str(exc)}
-        return {"ok": True, **bal}
+        before = (await app.settings.get_smm())["currency"]
+        detected = await smm.detect_currency()
+        autofixed = ""
+        if not detected:
+            autofixed = await smm.autofix_auto_currency()
+        repriced = 0
+        if (detected and detected != before) or autofixed:
+            repriced = await smm.reprice_all()
+        current = await app.settings.get_smm()
+        return {"ok": True, **bal, "detected_currency": detected,
+                "currency": current["currency"], "autofixed": autofixed,
+                "repriced": repriced, "audit": await smm.pricing_audit()}
 
     @server.get("/api/adm/smm/provider/categories")
     @_safe
@@ -344,10 +381,12 @@ def register_smm_api(server: FastAPI, app: App, any_user, admin_user) -> None:
         else:
             selected = [str(c) for c in cats][:500]
         try:
+            if (await app.settings.get_smm())["currency"] == "AUTO":
+                await smm.detect_currency()
             res = await smm.import_services(selected)
         except SmmError as exc:
             return {"ok": False, "error": "provider", "detail": str(exc)}
-        return {"ok": True, **res}
+        return {"ok": True, **res, "audit": await smm.pricing_audit()}
 
     @server.get("/api/adm/smm/services")
     @_safe

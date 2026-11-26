@@ -590,18 +590,29 @@ class SettingsRepo:
             "key": await self.get("smm_api_key", ""),
             "enabled": (await self.get("smm_enabled", "1")) == "1",
             "public_api": (await self.get("smm_public_api", "1")) == "1",
-            "rate": _f(await self.get("smm_rate", "1"), 1.0),       # provayder valyutasi -> so'm
+            # currency: auto | UZS | USD | RUB. UZS bo'lsa kurs har doim 1.
+            "currency": (await self.get("smm_currency", "auto")).upper() or "AUTO",
+            "rate": _f(await self.get("smm_rate", "1"), 1.0),       # qo'lda kurs (auto uchun)
+            "usd_rate": _f(await self.get("smm_usd_rate", "12600"), 12600.0),
+            "rub_rate": _f(await self.get("smm_rub_rate", "160"), 160.0),
             "markup": _f(await self.get("smm_markup", "30"), 30.0),  # ustama foiz
             "min_price": _f(await self.get("smm_min_price", "1"), 1.0),
         }
 
     async def set_smm(self, **kw) -> None:
         mapping = {"url": "smm_api_url", "key": "smm_api_key", "rate": "smm_rate",
+                   "currency": "smm_currency", "usd_rate": "smm_usd_rate",
+                   "rub_rate": "smm_rub_rate",
                    "markup": "smm_markup", "min_price": "smm_min_price"}
         for k, dbk in mapping.items():
             if k in kw and kw[k] is not None:
                 v = kw[k]
-                await self.set(dbk, v.strip().rstrip("/") if k == "url" else str(v).strip())
+                if k == "url":
+                    await self.set(dbk, str(v).strip().rstrip("/"))
+                elif k == "currency":
+                    await self.set(dbk, str(v).strip().upper()[:8])
+                else:
+                    await self.set(dbk, str(v).strip())
         for k, dbk in (("enabled", "smm_enabled"), ("public_api", "smm_public_api")):
             if k in kw and kw[k] is not None:
                 await self.set(dbk, "1" if kw[k] else "0")

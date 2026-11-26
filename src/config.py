@@ -67,7 +67,12 @@ class Settings(BaseModel):
     # kalitini env orqali berish ishonchliroq: panel ham, avto-import ham ishlaydi.
     smm_api_url: str = ""
     smm_api_key: str = ""
+    # Provayder narxi qaysi valyutada: AUTO | UZS | USD | RUB.
+    # UZS bo'lsa kurs 1 bo'ladi (narxlar sun'iy shishmaydi).
+    smm_currency: str = "AUTO"
     smm_rate: float = 1.0
+    smm_usd_rate: float = 12_600.0
+    smm_rub_rate: float = 160.0
     smm_markup: float = 30.0
 
     # --- PUBG UC nickname provayderi (ixtiyoriy) ---
@@ -98,6 +103,13 @@ class Settings(BaseModel):
     def is_admin(self, user_id: int) -> bool:
         """Foydalanuvchi adminlar ro'yxatida ekanligini tekshiradi."""
         return user_id in self.admin_ids or self.is_super_admin(user_id)
+
+    @field_validator("smm_currency", mode="before")
+    @classmethod
+    def _parse_smm_currency(cls, value: object) -> str:
+        """SMM valyutasi faqat AUTO/UZS/USD/RUB bo'lishi mumkin."""
+        cur = str(value or "AUTO").strip().upper()
+        return cur if cur in {"AUTO", "UZS", "USD", "RUB"} else "AUTO"
 
     @field_validator("admin_ids", mode="before")
     @classmethod
@@ -182,7 +194,10 @@ class Settings(BaseModel):
             api_callback_secret=os.getenv("API_CALLBACK_SECRET", ""),
             smm_api_url=os.getenv("SMM_API_URL", "").strip().rstrip("/"),
             smm_api_key=os.getenv("SMM_API_KEY", "").strip(),
+            smm_currency=(os.getenv("SMM_CURRENCY", "AUTO").strip().upper() or "AUTO"),
             smm_rate=_float_env("SMM_RATE", 1.0),
+            smm_usd_rate=_float_env("SMM_USD_RATE", 12_600.0),
+            smm_rub_rate=_float_env("SMM_RUB_RATE", 160.0),
             smm_markup=_float_env("SMM_MARKUP", 30.0),
             uc_lookup_url=os.getenv("UC_LOOKUP_URL", "").strip(),
             uc_lookup_key=os.getenv("UC_LOOKUP_KEY", "").strip(),

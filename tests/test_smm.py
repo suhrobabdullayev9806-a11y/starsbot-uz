@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 
-from src.modules.smm import SmmModule, detect_platform, map_status
+from src.modules.smm import SmmModule, detect_platform, map_status, normalize_currency
 from src.smm_client import SmmError
 
 
@@ -68,6 +68,22 @@ def test_pure_helpers():
     assert map_status("Completed") == "completed"
     assert map_status("Partial") == "partial"
     assert map_status("Refunded") == "canceled"
+
+
+def test_currency_helpers():
+    assert normalize_currency("$") == "USD"
+    assert normalize_currency("so'm") == "UZS"
+    assert normalize_currency("₽") == "RUB"
+    assert normalize_currency("boshqa") == ""
+    # UZS da kurs har doim 1: 12 600 kabi USD kursi narxni shishirmaydi.
+    assert SmmModule.effective_rate(
+        {"currency": "UZS", "rate": 12600, "usd_rate": 12600, "rub_rate": 160}) == 1.0
+    assert SmmModule.effective_rate(
+        {"currency": "USD", "rate": 1, "usd_rate": 12600, "rub_rate": 160}) == 12600
+    assert SmmModule.effective_rate(
+        {"currency": "RUB", "rate": 1, "usd_rate": 12600, "rub_rate": 160}) == 160
+    assert SmmModule.effective_rate(
+        {"currency": "AUTO", "rate": 12000, "usd_rate": 12600, "rub_rate": 160}) == 12000
 
 
 async def test_order_debits_and_sends(app):
@@ -204,7 +220,7 @@ async def test_import_and_reprice(app):
     assert {c["category"] for c in cats} == {"Telegram Members", "Instagram Likes"}
     await app.settings.set_smm(rate=12000, markup=25)
     res = await app.smm.import_services(["Telegram Members"])
-    assert res == {"added": 1, "skipped": 1}
+    assert res["added"] == 1 and res["skipped"] == 1 and res["updated"] == 0
     assert (await app.smm.import_services(["Telegram Members"]))["added"] == 0   # takroran qo'shilmaydi
     svc = [s for s in await app.smm.list_services() if s["provider_id"] == "1"][0]
     assert svc["price"] == 30000 and svc["platform"] == "telegram"
@@ -218,6 +234,23 @@ async def test_import_and_reprice(app):
     await app.smm.reprice_all()
     svc = [s for s in await app.smm.list_services() if s["provider_id"] == "1"][0]
     assert svc["price"] == 40000 and svc["auto_price"] == 0
+
+
+async def test_import_autofixes_currency_mismatch(app):
+    fake, _ = await _setup(app, balance=0)
+    fake.raw_services = [
+        {"service": "10", "name": "TG Arzon obunachi", "category": "Telegram Members",
+         "rate": "100", "min": "10", "max": "5000"},
+    ]
+    # Provayder so'mda, lekin avto rejimda USD kursi turibdi -> narx 1 260 000 bo'lardi.
+    await app.settings.set_smm(currency="AUTO", rate=12600, markup=0)
+    res = await app.smm.import_services()
+    assert res["autofixed"] == "UZS"
+    s = await app.settings.get_smm()
+    assert s["currency"] == "UZS" and s["rate"] == 12600
+    svc = [x for x in await app.smm.list_services() if x["provider_id"] == "10"][0]
+    assert svc["price"] == 100
+    assert (await app.smm.pricing_audit())["warning"] == ""
 
 
 async def test_public_catalog_hides_provider_data(app):

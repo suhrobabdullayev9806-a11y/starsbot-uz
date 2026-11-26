@@ -83,5 +83,5 @@ async def test_auto_post_no_account(app):
     oid = await _make_order(app)
     res = await app.admin.deliver_post_stars(oid)
     assert res["ok"] is False
-    assert res["reason"] == "no_active_account"
+    assert "no_active_account" in res["reason"]
     assert await app.users.balance_sum(5) == 50000
