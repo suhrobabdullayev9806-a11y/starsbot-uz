@@ -15,6 +15,7 @@ Telegram Stars (yulduzlar) sotib olish/gift/postga stars yuborish uchun to'liq, 
 - 🎁 **Gift olish/berish** — akkaunt ulansa avtomatik yetkaziladi
 - 🚀 **SMM Nakrutka (mini-app)** — obunachi/ko'rish/layk buyurtma qilish, so'm hisobidan to'lanadi, foydalanuvchilarga **API** beriladi
 - 🎮 **PUBG UC olish (mini-app, `/uc`)** — PUBG ID kiritiladi, nickname ko'rsatiladi, so'mlik hisobdan yechiladi, adminga ariza boradi
+- 🪙 **Gram (TON) olish (mini-app, `/gram`)** — paket tanlanadi, Gram hamyon manzili yoki Telegram `@username` kiritiladi, so'mlik hisobdan yechiladi
 - 🖼 **NFT olish (mini-app)** — admin qo'shgan Telegram NFT'larni so'mlik hisobdan sotib olish
 - 👛 **Hisob yuritish** — progress bar, sotilgan/sotib olingan stars, harakatlar tarixi
 - 💳 To'lov: **karta** (ruchka) va **online API** (balansdan ham mumkin)
@@ -27,6 +28,7 @@ Telegram Stars (yulduzlar) sotib olish/gift/postga stars yuborish uchun to'liq, 
 - 🎁 Gift qo'shish / ayirish
 - 💲 Narxlar va foizni belgilash
 - 🎮 **UC boshqarish** (admin mini-app → UC): statistika, buyurtmalar, paketlar, nickname tekshiruvi sozlamasi
+- 🪙 **Gram boshqarish** (admin mini-app → Gram): statistika, buyurtmalar, paketlar/narxlar, sotuvni ON/OFF
 - 🖼 **NFT boshqarish**: `t.me/nft/...` havolasi + narx → rasm, Model, Backdrop, Symbol avtomatik
 - 🔑 Akkaunt ulash / o'chirish
 - 📊 Sotuvlar statistikasi (kunlik / haftalik / oylik)
@@ -177,11 +179,30 @@ Har bir NFT yagona nusxa: bir vaqtda ikki kishi ola olmaydi.
 
 ---
 
+## 🪙 Gram (TON) olish (mini-app)
+
+**Foydalanuvchi:** bosh menyudagi **🪙 Gram olish** tugmasi mini-app (`/gram`) ni ochadi:
+1. **Qabul qiluvchi** — TON Gram hamyon manzili (`EQ…` / `UQ…` / `0:…`) yoki Telegram `@username`
+2. **Paket** — 1, 5, 10, 25, 50, 100 Gram (narxlar admin panelda)
+3. *Sotib olish* → tasdiqlash oynasi → narx **so'mlik hisobdan** yechiladi
+
+**Admin:** buyurtma to'liq ma'lumot bilan keladi — xaridor profili (`@username` + Telegram ID),
+qabul qiluvchi manzil yoki `@username`, paket va narx. Gram'ni yuborib **Tasdiqlash** bosiladi;
+**Rad etish** → pul xaridor hisobiga qaytariladi.
+
+**Sozlash:** `/admin` → **🪙 Gram** tabi — statistika, buyurtmalar (qidiruv + nusxalash),
+paket qo'shish/narx o'zgartirish/yashirish, sotuvni ON/OFF.
+
+> Fayllar: `src/modules/gram.py`, `src/handlers/gram.py`, `src/webapp/static/gram.html`, `tests/test_gram.py`, `tests/test_gram_api.py`.
+
+---
+
 ## 🛠 Admin mini-app (yangi) — `/admin`
 
 Botda `/admin` → **🛠 Admin mini-app** tugmasi (yoki BotFather → Menu button → `https://HOST/admin`).
-Bo'limlar: **Bosh** (statistika, akkaunt testi) · **Buyurtma** (tasdiqlash/rad: Stars, Post, Gift, Hisob, NFT) ·
-**NFT** (havola bilan qo'shish + ko'rish, narx o'zgartirish, o'chirish) · **Users** (qidirish, hisob qo'shish/ayirish) ·
+Bo'limlar: **Bosh** (statistika, akkaunt testi) · **Buyurtma** (tasdiqlash/rad: Stars, Post, Gift, Hisob, NFT, UC, Gram) ·
+**NFT** (havola bilan qo'shish + ko'rish, narx o'zgartirish, o'chirish) · **UC** (statistika, buyurtmalar, paketlar) ·
+**Gram** (statistika, buyurtmalar, paketlar) · **Users** (qidirish, hisob qo'shish/ayirish) ·
 **Sozlama** (bot ON/OFF, narxlar, karta). API: `src/webapp/admin_api.py` (`/api/adm/*`).
 
 ## 📝 Postga stars — tuzatishlar

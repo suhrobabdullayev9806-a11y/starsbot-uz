@@ -59,6 +59,14 @@ async def decide_order(app, bot, order_id: int, approve: bool) -> tuple[bool, st
             asyncio.create_task(_pay_channel(bot, app, order_id))
         return done, "ok" if done else "already_processed"
 
+    if typ == "gram":
+        from src.handlers.gram import finish_gram_order
+
+        done = await finish_gram_order(bot, app, order, approve=approve)
+        if done and approve:
+            asyncio.create_task(_pay_channel(bot, app, order_id))
+        return done, "ok" if done else "already_processed"
+
     if not approve:
         await app.admin.reject_order(order_id, "admin rejected")
         await _tell(bot, uid, t(lang, "order_rejected_user", order_id=order_id))

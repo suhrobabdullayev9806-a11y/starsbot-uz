@@ -13,6 +13,7 @@ from src.modules.accounts import AccountsModule
 from src.modules.admin import AdminModule
 from src.modules.bank import BankModule
 from src.modules.gifts import GiftsModule
+from src.modules.gram import GramModule
 from src.modules.nft import NftModule
 from src.modules.orders import OrdersModule
 from src.modules.payments import PaymentsModule
@@ -43,6 +44,7 @@ class App:
         self.gifts = GiftsModule(self.db, self.orders, self.users, self.accounts)
         self.nft = NftModule(self.db, self.orders, self.users)
         self.uc = UcModule(self.db, self.orders, self.users, self.settings)
+        self.gram = GramModule(self.db, self.orders, self.users, self.settings)
         self.admin = AdminModule(self.orders, self.users, self.accounts, self.settings)
         self.bank = BankModule(self.db, self.orders, self.users, self.cfg)
         self.sub_guard = SubscriptionGuard()
@@ -55,6 +57,7 @@ class App:
         """Bazaga ulanadi."""
         await self.db.connect()
         await self.uc.ensure_defaults()
+        await self.gram.ensure_defaults()
 
     async def is_admin(self, user_id: int) -> bool:
         """Foydalanuvchi admin ekanligini tekshiradi.

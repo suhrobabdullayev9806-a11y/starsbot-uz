@@ -145,6 +145,30 @@ CREATE TABLE IF NOT EXISTS uc_orders (
 );
 CREATE INDEX IF NOT EXISTS idx_uc_orders_user ON uc_orders(user_id, order_id);
 
+-- Gram (TON) paketlari: admin narxini so'mda belgilaydi
+CREATE TABLE IF NOT EXISTS gram_packages (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    grams      REAL    NOT NULL,           -- Gram miqdori (kasr bo'lishi mumkin)
+    price      REAL    DEFAULT 0,          -- so'm
+    active     INTEGER DEFAULT 1,
+    sort       INTEGER DEFAULT 0,
+    created_at TEXT
+);
+
+-- Gram buyurtmalari tafsiloti (holati orders jadvalida, type='gram')
+CREATE TABLE IF NOT EXISTS gram_orders (
+    order_id   INTEGER PRIMARY KEY,
+    user_id    INTEGER NOT NULL,
+    package_id INTEGER,
+    grams      REAL    DEFAULT 0,
+    price      REAL    DEFAULT 0,
+    wallet     TEXT    DEFAULT '',         -- Gram hamyon manzili yoki @username
+    wallet_kind TEXT   DEFAULT '',         -- address | username
+    username   TEXT    DEFAULT '',         -- xaridorning Telegram @username (nusxa)
+    created_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_gram_orders_user ON gram_orders(user_id, order_id);
+
 -- SMM Nakrutka: xizmatlar katalogi (provayderdan import yoki qo'lda qo'shiladi)
 CREATE TABLE IF NOT EXISTS smm_services (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -574,6 +598,18 @@ class SettingsRepo:
                        ("lookup_path", "uc_lookup_path")):
             if k in kw and kw[k] is not None:
                 await self.set(dbk, str(kw[k]).strip())
+
+    # --- Gram (TON) (admin panel orqali sozlanadi) ---
+
+    async def get_gram(self) -> dict:
+        """Gram sozlamalari. Narxlar gram_packages jadvalida saqlanadi."""
+        return {
+            "enabled": (await self.get("gram_enabled", "1")) == "1",
+        }
+
+    async def set_gram(self, **kw) -> None:
+        if "enabled" in kw and kw["enabled"] is not None:
+            await self.set("gram_enabled", "1" if kw["enabled"] else "0")
 
     # --- SMM Nakrutka (admin panel orqali sozlanadi) ---
 

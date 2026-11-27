@@ -60,52 +60,35 @@ def language_kb() -> InlineKeyboardMarkup:
 def main_menu_kb(lang: str) -> InlineKeyboardMarkup:
     """Asosiy menyu - minimalist UI, tugmalar yonma-yon (2 ta/qator)."""
     kb = InlineKeyboardBuilder()
-    kb.row(btn(t(lang, "menu_topup"), "topup:choose", GREEN))
-    if _WEBAPP_BASE_URL:
-        # WEBAPP_BASE_URL sozlangan: "Stars olish" tugmasi mini-appni ochadi
-        kb.row(InlineKeyboardButton(
-            text=t(lang, "menu_buy"),
-            web_app=WebAppInfo(url=f"{_WEBAPP_BASE_URL}/app"),
-            style=RED,
-        ))
-    else:
-        kb.button(text=t(lang, "menu_buy"), callback_data="menu:buy", style=RED)
-    # NFT olish: mini-app (WEBAPP_BASE_URL bo'lsa) — bo'lmasa tushuntirish xabari
-    if _WEBAPP_BASE_URL:
-        kb.row(InlineKeyboardButton(
-            text=t(lang, "menu_nft"),
-            web_app=WebAppInfo(url=f"{_WEBAPP_BASE_URL}/nft"),
-            style=GREEN,
-        ))
-    else:
-        kb.button(text=t(lang, "menu_nft"), callback_data="menu:nft", style=GREEN)
-    # SMM Nakrutka: mini-app (WEBAPP_BASE_URL bo'lsa) — bo'lmasa tushuntirish xabari
-    if _WEBAPP_BASE_URL:
-        kb.row(InlineKeyboardButton(
-            text=t(lang, "menu_smm"),
-            web_app=WebAppInfo(url=f"{_WEBAPP_BASE_URL}/smm"),
-            style=BLUE,
-        ))
-    else:
-        kb.button(text=t(lang, "menu_smm"), callback_data="menu:smm", style=BLUE)
-    # PUBG UC olish: mini-app (/uc) — WEBAPP_BASE_URL bo'lmasa tushuntirish xabari
-    if _WEBAPP_BASE_URL:
-        kb.row(InlineKeyboardButton(
-            text=t(lang, "menu_uc"),
-            web_app=WebAppInfo(url=f"{_WEBAPP_BASE_URL}/uc"),
-            style=RED,
-        ))
-    else:
-        kb.button(text=t(lang, "menu_uc"), callback_data="menu:uc", style=RED)
-    kb.button(text=t(lang, "menu_wallet"), callback_data="menu:wallet", style=BLUE)
-    kb.button(text=t(lang, "menu_gift"), callback_data="menu:gift", style=GREEN)
-    kb.button(text=t(lang, "menu_subscribe"), callback_data="menu:post_stars", style=BLUE)
-    kb.button(text=t(lang, "menu_pricing"), callback_data="menu:pricing", style=BLUE)
-    kb.button(text=t(lang, "menu_stats"), callback_data="menu:stats", style=GREEN)
-    kb.button(text=t(lang, "menu_help"), callback_data="menu:faq", style=GREEN)
-    kb.button(text="🌐", callback_data="lang:change", style=RED)
-    # topup (1) | stars + NFT (2) | SMM (1) | UC (1) | balans + gift (2) | post + narx (2) | stat + yordam + til (3)
-    kb.adjust(1, 2, 1, 1, 2, 2, 3)
+
+    def _webapp(text: str, url: str, color: str) -> InlineKeyboardButton:
+        return InlineKeyboardButton(
+            text=text, web_app=WebAppInfo(url=url), style=color)
+
+    topup = btn(t(lang, "menu_topup"), "topup:choose", GREEN)
+    buy = (_webapp(t(lang, "menu_buy"), f"{_WEBAPP_BASE_URL}/app", RED)
+           if _WEBAPP_BASE_URL else btn(t(lang, "menu_buy"), "menu:buy", RED))
+    kb.row(topup, buy)
+
+    nft = (_webapp(t(lang, "menu_nft"), f"{_WEBAPP_BASE_URL}/nft", GREEN)
+           if _WEBAPP_BASE_URL else btn(t(lang, "menu_nft"), "menu:nft", GREEN))
+    gram = (_webapp(t(lang, "menu_gram"), f"{_WEBAPP_BASE_URL}/gram", BLUE)
+            if _WEBAPP_BASE_URL else btn(t(lang, "menu_gram"), "menu:gram", BLUE))
+    kb.row(nft, gram)
+
+    smm = (_webapp(t(lang, "menu_smm"), f"{_WEBAPP_BASE_URL}/smm", BLUE)
+           if _WEBAPP_BASE_URL else btn(t(lang, "menu_smm"), "menu:smm", BLUE))
+    uc = (_webapp(t(lang, "menu_uc"), f"{_WEBAPP_BASE_URL}/uc", RED)
+          if _WEBAPP_BASE_URL else btn(t(lang, "menu_uc"), "menu:uc", RED))
+    kb.row(smm, uc)
+
+    kb.row(btn(t(lang, "menu_wallet"), "menu:wallet", BLUE),
+           btn(t(lang, "menu_gift"), "menu:gift", GREEN))
+    kb.row(btn(t(lang, "menu_subscribe"), "menu:post_stars", BLUE),
+           btn(t(lang, "menu_pricing"), "menu:pricing", BLUE))
+    kb.row(btn(t(lang, "menu_stats"), "menu:stats", GREEN),
+           btn(t(lang, "menu_help"), "menu:faq", GREEN))
+    kb.row(btn("🌐", "lang:change", RED))
     return kb.as_markup()
 
 
@@ -350,23 +333,31 @@ def post_stars_confirm_kb(lang: str) -> InlineKeyboardMarkup:
 # ---------------------------------------------------------------
 
 def admin_menu_kb(lang: str, bot_active: bool) -> InlineKeyboardMarkup:
+    """Admin menyusi: tugmalar 2 tadan yonma-yon (joylashuv ixcham)."""
     kb = InlineKeyboardBuilder()
+    buttons: list[InlineKeyboardButton] = []
     if _WEBAPP_BASE_URL:
-        kb.row(InlineKeyboardButton(
+        buttons.append(InlineKeyboardButton(
             text="🛠 " + ("Admin mini-app" if lang != "ru" else "Админ мини-app"),
             web_app=WebAppInfo(url=f"{_WEBAPP_BASE_URL}/admin"), style=GREEN))
-    kb.row(btn(t(lang, "admin_orders"), "admin:orders", BLUE))
-    kb.row(btn(t(lang, "admin_users"), "admin:users", BLUE))
-    kb.row(btn(t(lang, "admin_stats"), "admin:stats", GREEN))
-    kb.row(btn(t(lang, "admin_settings"), "admin:settings", BLUE))
-    kb.row(btn("👥 " + ("Admin boshqarish" if lang == "uz" else "Manage admins"), "admin:admins", BLUE))
-    kb.row(btn(t(lang, "admin_accounts"), "admin:accounts", GREEN))
-    kb.row(btn(t(lang, "admin_gifts"), "admin:gifts", RED))
-    kb.row(btn(t(lang, "admin_nft"), "admin:nfts", GREEN))
-    kb.row(btn(t(lang, "admin_uc"), "admin:uc", RED))
-    kb.row(btn(t(lang, "admin_broadcast"), "admin:broadcast", BLUE))
-    kb.row(btn(t(lang, "admin_faq"), "admin:faq", BLUE))
-    kb.row(btn(t(lang, "admin_toggle"), "admin:toggle", RED))
+    buttons += [
+        btn(t(lang, "admin_orders"), "admin:orders", BLUE),
+        btn(t(lang, "admin_users"), "admin:users", BLUE),
+        btn(t(lang, "admin_stats"), "admin:stats", GREEN),
+        btn(t(lang, "admin_settings"), "admin:settings", BLUE),
+        btn("👥 " + ("Admin boshqarish" if lang == "uz" else "Manage admins"),
+            "admin:admins", BLUE),
+        btn(t(lang, "admin_accounts"), "admin:accounts", GREEN),
+        btn(t(lang, "admin_gifts"), "admin:gifts", RED),
+        btn(t(lang, "admin_nft"), "admin:nfts", GREEN),
+        btn(t(lang, "admin_uc"), "admin:uc", RED),
+        btn(t(lang, "admin_gram"), "admin:gram", BLUE),
+        btn(t(lang, "admin_broadcast"), "admin:broadcast", BLUE),
+        btn(t(lang, "admin_faq"), "admin:faq", BLUE),
+        btn(t(lang, "admin_toggle"), "admin:toggle", RED),
+    ]
+    for i in range(0, len(buttons), 2):
+        kb.row(*buttons[i:i + 2])
     kb.row(btn(t(lang, "back"), "menu:main", RED))
     return kb.as_markup()
 
@@ -376,10 +367,10 @@ def admin_manage_kb(lang: str) -> InlineKeyboardMarkup:
     def _l(uz: str, en: str) -> str:
         return uz if lang == "uz" else en
     kb = InlineKeyboardBuilder()
-    kb.row(btn("➕ " + _l("Admin qo'shish", "Add admin"), "admin:admin_add", GREEN))
-    kb.row(btn("📄 " + _l("Adminlar ro'yxati", "Admin list"), "admin:admin_list", BLUE))
-    kb.row(btn("➖ " + _l("Admin o'chirish", "Remove admin"), "admin:admin_del", RED))
-    kb.row(btn(t(lang, "back"), "admin:main", RED))
+    kb.row(btn("➕ " + _l("Admin qo'shish", "Add admin"), "admin:admin_add", GREEN),
+           btn("📄 " + _l("Adminlar ro'yxati", "Admin list"), "admin:admin_list", BLUE))
+    kb.row(btn("➖ " + _l("Admin o'chirish", "Remove admin"), "admin:admin_del", RED),
+           btn(t(lang, "back"), "admin:main", RED))
     return kb.as_markup()
 
 
@@ -387,18 +378,18 @@ def admin_settings_kb(lang: str) -> InlineKeyboardMarkup:
     def _l(uz: str, en: str) -> str:
         return uz if lang == "uz" else en
     kb = InlineKeyboardBuilder()
-    kb.row(btn("📷 " + _l("Rasm o'rnatish", "Set image"), "admin:set_pic", GREEN))
-    kb.row(btn("💎 " + _l("Stars 1⭐ narxi", "Stars 1⭐ price"), "admin:set_star_price", GREEN))
-    kb.row(btn("🎁 " + _l("Gift 1⭐ narxi", "Gift 1⭐ price"), "admin:set_gift_price", GREEN))
-    kb.row(btn("📝 " + _l("Post 1⭐ narxi", "Post 1⭐ price"), "admin:set_post_price", GREEN))
-    kb.row(btn("📝 " + _l("Post minimal ⭐", "Post minimum ⭐"), "admin:set_post_min_stars", GREEN))
-    kb.row(btn("💵 " + _l("Narxlar", "Prices"), "admin:set_prices", BLUE))
-    kb.row(btn("💳 " + _l("Karta", "Card"), "admin:set_card", BLUE))
-    kb.row(btn("📢 " + _l("Majburiy kanal", "Required channel"), "admin:set_channel", BLUE))
-    kb.row(btn("🛒 " + _l("To'lovlar kanali", "Payments channel"), "admin:set_pay_channel", BLUE))
-    kb.row(btn("🗑 " + _l("Kanalni o'chirish", "Remove channel"), "admin:clear_pay_channel", RED))
-    kb.row(btn("🤖 " + _l("Stars API o'rnatish", "Set Stars API"), "admin:set_api", GREEN))
-    kb.row(btn("🗑 " + _l("Stars API o'chirish", "Remove Stars API"), "admin:clear_api", RED))
+    kb.row(btn("📷 " + _l("Rasm o'rnatish", "Set image"), "admin:set_pic", GREEN),
+           btn("💎 " + _l("Stars 1⭐ narxi", "Stars 1⭐ price"), "admin:set_star_price", GREEN))
+    kb.row(btn("🎁 " + _l("Gift 1⭐ narxi", "Gift 1⭐ price"), "admin:set_gift_price", GREEN),
+           btn("📝 " + _l("Post 1⭐ narxi", "Post 1⭐ price"), "admin:set_post_price", GREEN))
+    kb.row(btn("📝 " + _l("Post minimal ⭐", "Post minimum ⭐"), "admin:set_post_min_stars", GREEN),
+           btn("💵 " + _l("Narxlar", "Prices"), "admin:set_prices", BLUE))
+    kb.row(btn("💳 " + _l("Karta", "Card"), "admin:set_card", BLUE),
+           btn("📢 " + _l("Majburiy kanal", "Required channel"), "admin:set_channel", BLUE))
+    kb.row(btn("🛒 " + _l("To'lovlar kanali", "Payments channel"), "admin:set_pay_channel", BLUE),
+           btn("🗑 " + _l("Kanalni o'chirish", "Remove channel"), "admin:clear_pay_channel", RED))
+    kb.row(btn("🤖 " + _l("Stars API o'rnatish", "Set Stars API"), "admin:set_api", GREEN),
+           btn("🗑 " + _l("Stars API o'chirish", "Remove Stars API"), "admin:clear_api", RED))
     kb.row(btn(t(lang, "back"), "admin:main", RED))
     return kb.as_markup()
 
@@ -406,18 +397,18 @@ def admin_settings_kb(lang: str) -> InlineKeyboardMarkup:
 def admin_orders_kb(lang: str, order_id: int) -> InlineKeyboardMarkup:
     """Buyurtmani qabul qilish / rad etish."""
     kb = InlineKeyboardBuilder()
-    kb.row(btn(t(lang, "approve_button"), f"order:approve:{order_id}", GREEN))
-    kb.row(btn(t(lang, "reject_button"), f"order:reject:{order_id}", RED))
+    kb.row(btn(t(lang, "approve_button"), f"order:approve:{order_id}", GREEN),
+           btn(t(lang, "reject_button"), f"order:reject:{order_id}", RED))
     kb.row(btn(t(lang, "back"), "admin:orders", RED))
     return kb.as_markup()
 
 
 def admin_gift_kb(lang: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.row(btn("➕ " + ("Gift qo'shish" if lang == "uz" else "Add gift"), "admin:gift_add", GREEN))
-    kb.row(btn("📄 " + ("Ro'yxat" if lang == "uz" else "List"), "admin:gift_list", BLUE))
-    kb.row(btn("❌ " + ("O'chirish" if lang == "uz" else "Remove"), "admin:gift_del", RED))
-    kb.row(btn("➖ " + ("Balansdan ayirish" if lang == "uz" else "Subtract balance"), "admin:gift_sub", RED))
+    kb.row(btn("➕ " + ("Gift qo'shish" if lang == "uz" else "Add gift"), "admin:gift_add", GREEN),
+           btn("📄 " + ("Ro'yxat" if lang == "uz" else "List"), "admin:gift_list", BLUE))
+    kb.row(btn("❌ " + ("O'chirish" if lang == "uz" else "Remove"), "admin:gift_del", RED),
+           btn("➖ " + ("Balansdan ayirish" if lang == "uz" else "Subtract balance"), "admin:gift_sub", RED))
     kb.row(btn(t(lang, "back"), "admin:main", RED))
     return kb.as_markup()
 
@@ -427,10 +418,10 @@ def admin_nft_kb(lang: str) -> InlineKeyboardMarkup:
     def _l(uz: str, en: str) -> str:
         return uz if lang == "uz" else en
     kb = InlineKeyboardBuilder()
-    kb.row(btn("➕ " + _l("NFT qo'shish (URL)", "Add NFT (URL)"), "admin:nft_add", GREEN))
-    kb.row(btn("📄 " + _l("Ro'yxat", "List"), "admin:nft_list", BLUE))
-    kb.row(btn("💲 " + _l("Narxini o'zgartirish", "Change price"), "admin:nft_price", BLUE))
-    kb.row(btn("❌ " + _l("O'chirish", "Remove"), "admin:nft_del", RED))
+    kb.row(btn("➕ " + _l("NFT qo'shish (URL)", "Add NFT (URL)"), "admin:nft_add", GREEN),
+           btn("📄 " + _l("Ro'yxat", "List"), "admin:nft_list", BLUE))
+    kb.row(btn("💲 " + _l("Narxini o'zgartirish", "Change price"), "admin:nft_price", BLUE),
+           btn("❌ " + _l("O'chirish", "Remove"), "admin:nft_del", RED))
     kb.row(btn(t(lang, "back"), "admin:main", RED))
     return kb.as_markup()
 
@@ -457,14 +448,25 @@ def uc_open_kb(lang: str) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def gram_open_kb(lang: str) -> InlineKeyboardMarkup:
+    """Foydalanuvchiga: Gram mini-appini ochish tugmasi."""
+    kb = InlineKeyboardBuilder()
+    if _WEBAPP_BASE_URL:
+        kb.row(InlineKeyboardButton(
+            text=t(lang, "menu_gram"), web_app=WebAppInfo(url=f"{_WEBAPP_BASE_URL}/gram"),
+            style=BLUE))
+    kb.row(btn(t(lang, "back"), "menu:main", RED))
+    return kb.as_markup()
+
+
 def admin_accounts_kb(lang: str) -> InlineKeyboardMarkup:
     def _l(uz: str, en: str) -> str:
         return uz if lang == "uz" else en
     kb = InlineKeyboardBuilder()
-    kb.row(btn("📲 " + _l("Login orqali ulash", "Connect via login"), "admin:acct_login", GREEN))
-    kb.row(btn("➕ " + _l("Session string", "Session string"), "admin:acct_add", BLUE))
-    kb.row(btn("🔌 " + _l("Test ulanish", "Test connection"), "admin:acct_test", BLUE))
-    kb.row(btn("📄 " + _l("Ro'yxat", "List"), "admin:acct_list", BLUE))
-    kb.row(btn("❌ " + _l("Akkaunt o'chirish", "Remove account"), "admin:acct_del", RED))
-    kb.row(btn(t(lang, "back"), "admin:main", RED))
+    kb.row(btn("📲 " + _l("Login orqali ulash", "Connect via login"), "admin:acct_login", GREEN),
+           btn("➕ " + _l("Session string", "Session string"), "admin:acct_add", BLUE))
+    kb.row(btn("🔌 " + _l("Test ulanish", "Test connection"), "admin:acct_test", BLUE),
+           btn("📄 " + _l("Ro'yxat", "List"), "admin:acct_list", BLUE))
+    kb.row(btn("❌ " + _l("Akkaunt o'chirish", "Remove account"), "admin:acct_del", RED),
+           btn(t(lang, "back"), "admin:main", RED))
     return kb.as_markup()

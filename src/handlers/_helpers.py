@@ -160,9 +160,10 @@ async def notify_payments_channel(bot: Bot, app, order_id: int) -> None:
             "topup": "💰 Hisob to'ldirish (so'm)",
             "nft": "🖼 NFT",
             "uc": "🎮 PUBG UC",
+            "gram": "🪙 Gram (TON)",
         }
         stars = float(order["stars_amount"])
-        bio = (f"<b>{int(stars)} ⭐</b>" if stars and order["type"] not in ("nft", "uc") else
+        bio = (f"<b>{int(stars)} ⭐</b>" if stars and order["type"] not in ("nft", "uc", "gram") else
                f"<b>{float(order['price_amount']):,.0f} so'm</b>")
         head = _STATUS_HEAD.get(str(order["status"]), "🆕 <b>BUYURTMA</b>")
         text = (

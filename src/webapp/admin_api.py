@@ -93,9 +93,13 @@ def register_admin_api(server: FastAPI, app: App, admin_user) -> None:
         uc_done = await db.fetch_one(
             "SELECT COUNT(*) AS c, COALESCE(SUM(price_amount),0) AS s FROM orders "
             "WHERE type='uc' AND status='done'")
+        gram_done = await db.fetch_one(
+            "SELECT COUNT(*) AS c, COALESCE(SUM(price_amount),0) AS s FROM orders "
+            "WHERE type='gram' AND status='done'")
         return {
             "ok": True, **stats,
             "uc_done": uc_done,
+            "gram_done": gram_done,
             "pending": (pending or {}).get("c", 0),
             "nft": {r["status"]: r["c"] for r in nft_rows},
             "accounts": {"total": len(accounts),
@@ -308,6 +312,83 @@ def register_admin_api(server: FastAPI, app: App, admin_user) -> None:
         app.uc._cache.pop(pid, None)
         res = await app.uc.lookup(pid)
         return {"ok": True, **res}
+
+    # ---------- GRAM (TON) ----------
+    GRAM_ERR = {"bad_grams": "bad_grams", "bad_price": "bad_price"}
+
+    @_S.get("/api/adm/gram/stats")
+    async def gram_stats(request: Request):
+        if not await admin_user(request):
+            return deny()
+        return {"ok": True, **await app.gram.stats()}
+
+    @_S.get("/api/adm/gram/orders")
+    async def gram_orders(request: Request, status: str = "", q: str = "", limit: int = 60):
+        if not await admin_user(request):
+            return deny()
+        return {"ok": True, "orders": await app.gram.list_orders(status, q, limit)}
+
+    @_S.get("/api/adm/gram/packages")
+    async def gram_packages(request: Request):
+        if not await admin_user(request):
+            return deny()
+        return {"ok": True, "items": await app.gram.list_all()}
+
+    @_S.post("/api/adm/gram/packages")
+    async def gram_package_add(request: Request):
+        if not await admin_user(request):
+            return deny()
+        b = await body_of(request)
+        try:
+            pid = await app.gram.add_package(_num(b.get("grams")), _num(b.get("price")))
+        except ValueError as exc:
+            return {"ok": False, "error": GRAM_ERR.get(str(exc), "bad_request")}
+        return {"ok": True, "id": pid}
+
+    @_S.post("/api/adm/gram/packages/{package_id}/update")
+    async def gram_package_update(package_id: int, request: Request):
+        if not await admin_user(request):
+            return deny()
+        b = await body_of(request)
+        fields = {}
+        if "grams" in b:
+            fields["grams"] = _num(b["grams"])
+        if "price" in b:
+            fields["price"] = _num(b["price"])
+        if "sort" in b:
+            fields["sort"] = int(_num(b["sort"]))
+        if "active" in b:
+            fields["active"] = bool(b["active"])
+        try:
+            ok = await app.gram.update_package(package_id, **fields)
+        except ValueError as exc:
+            return {"ok": False, "error": GRAM_ERR.get(str(exc), "bad_request")}
+        return {"ok": ok, "error": "" if ok else "not_found"}
+
+    @_S.post("/api/adm/gram/packages/{package_id}/delete")
+    async def gram_package_delete(package_id: int, request: Request):
+        if not await admin_user(request):
+            return deny()
+        ok = await app.gram.delete_package(package_id)
+        return {"ok": ok, "error": "" if ok else "not_found"}
+
+    @_S.get("/api/adm/gram/settings")
+    async def gram_settings(request: Request):
+        if not await admin_user(request):
+            return deny()
+        c = await app.settings.get_gram()
+        return {"ok": True, "enabled": c["enabled"]}
+
+    @_S.post("/api/adm/gram/settings")
+    async def gram_settings_save(request: Request):
+        if not await admin_user(request):
+            return deny()
+        b = await body_of(request)
+        kw = {}
+        if "enabled" in b:
+            kw["enabled"] = bool(b["enabled"])
+        await app.settings.set_gram(**kw)
+        return {"ok": True}
 
     # ---------- Foydalanuvchilar ----------
     @_S.get("/api/adm/users")

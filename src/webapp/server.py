@@ -479,6 +479,81 @@ def make_server(app: App) -> FastAPI:
         }
 
     # ---------------------------------------------------------------
+    # GRAM (TON) DO'KONI (mini-app): paket + hamyon/@username -> balansdan to'lov
+    # Sahifa /gram, ma'lumot /api/gram/info, xarid /api/gram/buy
+    # ---------------------------------------------------------------
+    @server.get("/gram", response_class=HTMLResponse)
+    async def gram_page():
+        html = (STATIC_DIR / "gram.html").read_text(encoding="utf-8")
+        return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+
+    @server.get("/api/gram/info")
+    async def api_gram_info(request: Request):
+        info = await any_user(request)
+        if not info:
+            return JSONResponse({"ok": False, "error": "auth"}, status_code=401)
+        user_id = int(info["id"])
+        channel, _cid = await app.settings.get_channel()
+        need_sub = not await app.sub_guard.ok(app, app.bot, user_id)
+        gcfg = await app.settings.get_gram()
+        user = await app.users.get(user_id) or {}
+        history = await app.gram.user_history(user_id, 8)
+        return {
+            "ok": True,
+            "need_sub": need_sub,
+            "channel": channel,
+            "enabled": gcfg["enabled"],
+            "balance_sum": await app.users.balance_sum(user_id),
+            "username": (user.get("username") or info.get("username") or ""),
+            "last_wallet": await app.gram.last_wallet(user_id),
+            "packages": [
+                {"id": p["id"], "grams": float(p["grams"]), "price": float(p["price"])}
+                for p in await app.gram.list_active()],
+            "history": [
+                {"order_id": h["order_id"], "grams": h["grams"], "price": h["price"],
+                 "wallet": h["wallet"], "wallet_kind": h["wallet_kind"], "status": h["status"],
+                 "created_at": h["created_at"]} for h in history],
+        }
+
+    @server.post("/api/gram/buy")
+    async def api_gram_buy(request: Request):
+        info = await any_user(request)
+        if not info:
+            return JSONResponse({"ok": False, "error": "auth"}, status_code=401)
+        user_id = int(info["id"])
+        if not await app.sub_guard.ok(app, app.bot, user_id):
+            return {"ok": False, "error": "subscribe"}
+        try:
+            body = await request.json()
+            package_id = int(body.get("package_id", 0))
+            wallet = str(body.get("wallet", "") or "")
+        except Exception:  # noqa: BLE001
+            return JSONResponse({"ok": False, "error": "bad_request"}, status_code=400)
+        await app.users.get_or_create(
+            user_id, info.get("username") or "", info.get("first_name") or "", "uz")
+        result = await app.gram.purchase(
+            user_id, package_id, wallet, username=info.get("username") or "")
+        if not result.ok:
+            return {"ok": False, "error": result.error,
+                    "balance_sum": await app.users.balance_sum(user_id)}
+        order = await app.gram.get_order(result.order_id) or {}
+        try:
+            from src.handlers.gram import notify_buyer_accepted, notify_gram_order
+            if app.bot:
+                await notify_buyer_accepted(app.bot, app, result.order_id)
+                await notify_gram_order(app.bot, app, result.order_id)
+        except Exception:  # noqa: BLE001
+            pass
+        return {
+            "ok": True, "order_id": result.order_id,
+            "grams": float(order.get("grams", 0)),
+            "price": float(order.get("price", 0)),
+            "wallet": order.get("wallet", ""),
+            "wallet_kind": order.get("wallet_kind", ""),
+            "balance_sum": await app.users.balance_sum(user_id),
+        }
+
+    # ---------------------------------------------------------------
     # AVTO-TO'LOV (mini-app): summa -> karta rekvizitlari -> tranzaksiya ID
     # ---------------------------------------------------------------
     @server.get("/api/topup/info")

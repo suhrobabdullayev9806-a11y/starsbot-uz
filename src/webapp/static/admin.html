@@ -32,15 +32,16 @@ h2{font-size:13px;color:var(--m);font-weight:600;text-transform:uppercase;letter
 .btn.g{background:var(--g);color:#06281a}.btn.e{background:var(--e);color:#fff}.btn.n{background:var(--r);color:var(--t)}
 .btn.s{padding:7px 11px;font-size:13px;border-radius:10px}
 .btn:disabled{opacity:.5}
-.acts{display:flex;gap:8px;margin-top:10px}.acts .btn{flex:1}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.acts .btn{width:100%}.acts .btn:only-child{grid-column:1/-1}
 input,select{width:100%;padding:12px 13px;border-radius:12px;background:var(--r);border:1px solid var(--h);margin-bottom:8px}
 input:focus{outline:2px solid var(--a)}
 .img{width:56px;height:56px;border-radius:14px;object-fit:cover;background:var(--r);flex:none}
 .chips{display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px}.chips::-webkit-scrollbar{display:none}
 .chip{padding:7px 13px;border-radius:99px;background:var(--r);white-space:nowrap;font-size:13px;font-weight:600;color:var(--m)}
 .chip.on{background:var(--a);color:#fff}
-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--p);border-top:1px solid var(--h);padding:6px 6px calc(6px + var(--sb));z-index:10}
-nav button{flex:1;min-width:0;padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--m);position:relative}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--p);border-top:1px solid var(--h);padding:6px 6px calc(6px + var(--sb));z-index:10;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:1 0 52px;min-width:0;padding:6px 0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--m);position:relative;white-space:nowrap}
 nav button i{font-style:normal;font-size:20px}
 nav button.on{color:var(--a)}
 nav b{position:absolute;top:0;right:22%;background:var(--e);color:#fff;font-size:10px;min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
@@ -71,9 +72,9 @@ var $=function(s){return document.querySelector(s)};
 var E=function(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
 var F=function(n){return Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:0})};
 var NF=[],tab="home",ofilter="pending",pending=0,busy=false;
-var TABS=[["home","📊","Bosh"],["orders","📦","Buyurtma"],["nft","🖼","NFT"],["uc","🎮","UC"],["users","👥","Users"],["smm","🚀","SMM"],["set","⚙️","Sozlama"]];
-var TYPES={buy:"⭐ Stars",post_stars:"📝 Post",gift:"🎁 Gift",topup:"💳 Hisob",nft:"🖼 NFT",uc:"🎮 UC"};
-var ERR={bad_url:"Havola noto'g'ri (t.me/nft/Nom-123)",bad_price:"Narx noto'g'ri",duplicate:"Bu NFT allaqachon qo'shilgan",not_active:"Faqat sotuvdagi NFT o'chiriladi",insufficient:"Hisobda yetarli mablag' yo'q",bad_request:"Noto'g'ri so'rov",order_not_found:"Buyurtma topilmadi",already_processed:"Allaqachon ko'rib chiqilgan",server:"Serverda xatolik",network:"Internet bilan aloqa yo'q",auth:"Ruxsat yo'q: mini-appni botdagi tugma orqali oching",not_found:"Topilmadi",bad_uc:"UC miqdori noto'g'ri",bad_lookup_url:"Manzil http(s):// bilan boshlansin va {id} bo'lsin",bad_pubg_id:"PUBG ID noto'g'ri",bad_id:"ID raqam bo'lishi kerak",primary:"Asosiy adminni bu yerdan o'chirib bo'lmaydi",self:"O'zingizni adminlikdan o'chira olmaysiz"};
+var TABS=[["home","📊","Bosh"],["orders","📦","Buyurtma"],["nft","🖼","NFT"],["uc","🎮","UC"],["gram","🪙","Gram"],["users","👥","Users"],["smm","🚀","SMM"],["set","⚙️","Sozlama"]];
+var TYPES={buy:"⭐ Stars",post_stars:"📝 Post",gift:"🎁 Gift",topup:"💳 Hisob",nft:"🖼 NFT",uc:"🎮 UC",gram:"🪙 Gram"};
+var ERR={bad_url:"Havola noto'g'ri (t.me/nft/Nom-123)",bad_price:"Narx noto'g'ri",duplicate:"Bu NFT allaqachon qo'shilgan",not_active:"Faqat sotuvdagi NFT o'chiriladi",insufficient:"Hisobda yetarli mablag' yo'q",insufficient_sum:"Hisobda yetarli mablag' yo'q",bad_request:"Noto'g'ri so'rov",order_not_found:"Buyurtma topilmadi",already_processed:"Allaqachon ko'rib chiqilgan",server:"Serverda xatolik",network:"Internet bilan aloqa yo'q",auth:"Ruxsat yo'q: mini-appni botdagi tugma orqali oching",not_found:"Topilmadi",bad_uc:"UC miqdori noto'g'ri",bad_grams:"Gram miqdori noto'g'ri",bad_wallet:"Gram manzili noto'g'ri",no_package:"Bu paket sotuvda yo'q",bad_lookup_url:"Manzil http(s):// bilan boshlansin va {id} bo'lsin",bad_pubg_id:"PUBG ID noto'g'ri",bad_id:"ID raqam bo'lishi kerak",primary:"Asosiy adminni bu yerdan o'chirib bo'lmaydi",self:"O'zingizni adminlikdan o'chira olmaysiz"};
 
 function toast(m){var t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(function(){t.classList.remove("show")},2800);if(tg&&tg.HapticFeedback)try{tg.HapticFeedback.impactOccurred("light")}catch(e){}}
 function api(p,o){o=o||{};o.headers={"X-Telegram-Init-Data":tg?tg.initData:"","Content-Type":"application/json"};o.cache="no-store";
@@ -92,7 +93,7 @@ function nav(){$("#nav").innerHTML=TABS.map(function(t){return'<button data-t="'
 function loading(){$("#view").innerHTML='<div class="empty">Yuklanmoqda…</div>'}
 function authFail(){$("#view").innerHTML='<div class="empty">🔒 Ruxsat yo\'q.<br>Bu sahifa faqat adminlar uchun va Telegram ichida ochiladi.</div>'}
 
-function render(){nav();$("#title").textContent=TABS.filter(function(t){return t[0]===tab})[0][2];loading();({home:home,orders:orders,nft:nfts,uc:uc,users:users,smm:smm,set:settings})[tab]()}
+function render(){nav();$("#title").textContent=TABS.filter(function(t){return t[0]===tab})[0][2];loading();({home:home,orders:orders,nft:nfts,uc:uc,gram:gram,users:users,smm:smm,set:settings})[tab]()}
 
 function home(){api("/api/adm/overview").then(function(d){
  if(d.error==="auth")return authFail();if(!d.ok)return $("#view").innerHTML='<div class="empty">Yuklab bo\'lmadi</div>';
@@ -102,7 +103,7 @@ function home(){api("/api/adm/overview").then(function(d){
  box("Kunlik ⭐",F(d.daily.sold_stars),F(d.daily.sold_sum)+" so'm")+box("Haftalik ⭐",F(d.weekly.sold_stars),F(d.weekly.sold_sum)+" so'm")+
  box("Oylik ⭐",F(d.monthly.sold_stars),F(d.monthly.sold_sum)+" so'm")+box("Foydalanuvchi",F(d.users),"")+
  box("Kutilayotgan",F(d.pending),"buyurtma")+box("NFT sotuvda",F(n.active||0),"band: "+F(n.reserved||0)+" · sotilgan: "+F(n.sold||0))+
- box("Post stars",F(d.post_done.s),F(d.post_done.c)+" ta buyurtma")+box("NFT daromad",F(d.nft_sold.s),"so'm · "+F(d.nft_sold.c)+" ta")+box("UC daromad",F((d.uc_done||{}).s),"so'm · "+F((d.uc_done||{}).c)+" ta")+
+ box("Post stars",F(d.post_done.s),F(d.post_done.c)+" ta buyurtma")+box("NFT daromad",F(d.nft_sold.s),"so'm · "+F(d.nft_sold.c)+" ta")+box("UC daromad",F((d.uc_done||{}).s),"so'm · "+F((d.uc_done||{}).c)+" ta")+box("Gram daromad",F((d.gram_done||{}).s),"so'm · "+F((d.gram_done||{}).c)+" ta")+
  '</div><h2>Akkauntlar</h2><div class="card row sp"><div><div class="nm">Ulangan akkauntlar</div><div class="sub">Faol: '+d.accounts.active+" / "+d.accounts.total+'</div></div><button class="btn n s" id="accs">Tekshirish</button></div><div id="accout"></div>'
  $("#accs").onclick=accounts})}
 function box(l,v,s){return'<div class="box"><div class="lbl">'+l+'</div><div class="big">'+v+'</div><div class="lbl">'+s+"</div></div>"}
@@ -244,6 +245,64 @@ function smOrd(){var fs=[["active","Faol"],["","Hammasi"],["completed","Bajarilg
  $("#smsy").onclick=function(){toast("Yangilanmoqda…");post("/api/adm/smm/sync").then(function(r){toast(r.ok?"✅ O'zgargan: "+r.changed:"❌ "+smErr(r));smOrd()})};
  [].forEach.call(document.querySelectorAll("[data-cx]"),function(b){b.onclick=function(){ask("Buyurtma #"+b.dataset.cx+" bekor qilinib, pul mijozga qaytarilsinmi?",function(){post("/api/adm/smm/orders/"+b.dataset.cx+"/cancel").then(function(r){toast(r.ok?"✅ Qaytarildi":"❌ "+smErr(r));smOrd()})})}})})}
 
+
+/* ===================== GRAM (TON) ===================== */
+var GR={sub:"stats",ofil:"pending",oq:"",pk:[]};
+function grF(n){n=Number(n||0);if(Math.abs(n-Math.round(n))<1e-9)return F(n);return String(n.toFixed(4)).replace(/0+$/,"").replace(/\.$/,"")}
+function grErr(d){if(d.reason==="duplicate"||d.error==="duplicate")return "Bu buyurtma hozirgina yuborilgan";return ERR[d.reason]||ERR[d.error]||d.reason||d.error||"Xato"}
+function gram(){
+ var subs=[["stats","Statistika"],["ord","Buyurtmalar"],["pk","Paketlar"],["set","Sozlama"]];
+ $("#view").innerHTML='<div class="chips">'+subs.map(function(s){return'<button class="chip '+(GR.sub===s[0]?"on":"")+'" data-gr="'+s[0]+'">'+s[1]+"</button>"}).join("")+'</div><div id="gv"><div class="empty">Yuklanmoqda…</div></div>';
+ [].forEach.call(document.querySelectorAll("[data-gr]"),function(b){b.onclick=function(){GR.sub=b.dataset.gr;gram()}});
+ ({stats:grStats,ord:grOrd,pk:grPk,set:grSet})[GR.sub]()}
+function grStats(){api("/api/adm/gram/stats").then(function(d){
+ if(d.error==="auth")return authFail();if(!d.ok)return $("#gv").innerHTML='<div class="empty">Yuklab bo\'lmadi</div>';
+ var p=d.periods;
+ var h='<div class="grid">'+box("Bugun",grF(p.today.grams)+" Gram",F(p.today.orders)+" ta · "+F(p.today.revenue)+" so'm")+
+ box("Hafta",grF(p.week.grams)+" Gram",F(p.week.orders)+" ta · "+F(p.week.revenue)+" so'm")+
+ box("Oy",grF(p.month.grams)+" Gram",F(p.month.orders)+" ta · "+F(p.month.revenue)+" so'm")+
+ box("Jami",grF(p.all.grams)+" Gram",F(p.all.orders)+" ta · "+F(p.all.revenue)+" so'm")+
+ box("Kutilmoqda",F(d.pending.c),grF(d.pending.grams)+" Gram · "+F(d.pending.s)+" so'm")+
+ box("O'rtacha chek",F(d.avg_order),"so'm · rad: "+F(d.rejected)+" ta")+'</div>';
+ if(d.top_packages&&d.top_packages.length)h+="<h2>Top paketlar</h2>"+d.top_packages.map(function(r){return'<div class="card row sp"><div class="nm">'+grF(r.grams)+' Gram</div><div class="sub">'+F(r.orders)+" ta · "+F(r.revenue)+" so'm</div></div>"}).join("");
+ if(d.top_buyers&&d.top_buyers.length)h+="<h2>Top xaridorlar</h2>"+d.top_buyers.map(function(r){return'<div class="card row sp"><div class="col"><div class="nm">'+(r.username?"@"+E(r.username):E(r.first_name||r.user_id))+'</div><div class="sub">ID <code>'+r.user_id+"</code> · "+F(r.orders)+" ta · "+grF(r.grams)+' Gram</div></div><b style="color:var(--y)">'+F(r.revenue)+"</b></div>"}).join("");
+ $("#gv").innerHTML=h})}
+function grOrd(){var fs=[["pending","Kutilmoqda"],["","Hammasi"],["done","Yuborilgan"],["rejected","Rad"]];
+ api("/api/adm/gram/orders?status="+GR.ofil+"&q="+encodeURIComponent(GR.oq)).then(function(d){
+ if(d.error==="auth")return authFail();if(!d.ok)return $("#gv").innerHTML='<div class="empty">Yuklab bo\'lmadi</div>';
+ var h='<input id="grq" placeholder="Hamyon, @username yoki user ID" value="'+E(GR.oq)+'"><div class="chips">'+fs.map(function(f){return'<button class="chip '+(f[0]===GR.ofil?"on":"")+'" data-gf="'+f[0]+'">'+f[1]+"</button>"}).join("")+"</div>";
+ if(!d.orders.length)h+='<div class="empty">Buyurtma yo\'q</div>';
+ h+=d.orders.map(function(o){var wait=o.status==="pending"||o.status==="processing";var who=o.buyer_username||o.username;
+  return'<div class="card"><div class="row sp"><div class="nm">#'+o.order_id+" · "+grF(o.grams)+' Gram</div><span class="tag s-'+E(o.status)+'">'+E(o.status)+"</span></div>"+
+  '<div class="sub">👤 '+(who?"@"+E(who):E(o.buyer_first_name||"—"))+' · id <code>'+o.user_id+'</code></div>'+
+  '<div class="sub">👛 <code>'+E(o.wallet)+'</code> · '+(o.wallet_kind==="username"?"Telegram profil":"TON hamyon")+'</div>'+
+  '<div class="sub">💰 <b style="color:var(--y)">'+F(o.price)+' so\'m</b> · '+E((o.created_at||"").replace("T"," ").slice(0,16))+"</div>"+
+  '<div class="acts">'+(wait?'<button class="btn g" data-gok="'+o.order_id+'">✅ Yuborildi</button><button class="btn e" data-gno="'+o.order_id+'">❌ Rad</button>':"")+
+  '<button class="btn n s" data-gcopy="'+E(o.wallet)+'">📋 Manzilni nusxalash</button></div></div>'}).join("");
+ $("#gv").innerHTML=h;var tm;
+ $("#grq").oninput=function(){GR.oq=this.value;clearTimeout(tm);tm=setTimeout(grOrd,350)};
+ [].forEach.call(document.querySelectorAll("[data-gf]"),function(b){b.onclick=function(){GR.ofil=b.dataset.gf;grOrd()}});
+ [].forEach.call(document.querySelectorAll("[data-gok]"),function(b){b.onclick=function(){ask("Gram yuborganingizni tasdiqlaysizmi? (#"+b.dataset.gok+")",function(){decide(b.dataset.gok,"approve",b)})}});
+ [].forEach.call(document.querySelectorAll("[data-gno]"),function(b){b.onclick=function(){ask("Buyurtma #"+b.dataset.gno+" rad etilib, pul qaytarilsinmi?",function(){decide(b.dataset.gno,"reject",b)})}});
+ [].forEach.call(document.querySelectorAll("[data-gcopy]"),function(b){b.onclick=function(){copyTxt(b.dataset.gcopy)}})})}
+function grPk(){api("/api/adm/gram/packages").then(function(d){
+ if(d.error==="auth")return authFail();var rows=d.items||[];GR.pk=rows;
+ var h='<div class="card"><div class="lbl" style="margin-bottom:8px">Yangi paket</div><input id="gu" placeholder="Gram miqdori (masalan 5)" inputmode="decimal"><input id="gp" placeholder="Narx (so\'m)" inputmode="numeric"><button class="btn g" id="gadd" style="width:100%">➕ Qo\'shish</button></div><h2>Paketlar ('+rows.length+')</h2>';
+ h+=rows.map(function(r){return'<div class="card"><div class="row sp"><div class="col"><div class="nm">'+grF(r.grams)+' Gram</div><div class="sub"><b style="color:var(--y)">'+F(r.price)+' so\'m</b> · '+(r.grams>0?F(r.price/r.grams):0)+' so\'m/Gram</div></div><span class="tag s-'+(r.active?"active":"rejected")+'">'+(r.active?"sotuvda":"yashirin")+'</span></div><div class="acts"><button class="btn n s" data-ge="'+r.id+'">✏️ Tahrir</button><button class="btn n s" data-gt="'+r.id+'" data-a="'+r.active+'">'+(r.active?"Yashirish":"Yoqish")+'</button><button class="btn e s" data-gx="'+r.id+'">🗑 O\'chirish</button></div></div>'}).join("");
+ $("#gv").innerHTML=h;
+ $("#gadd").onclick=function(){var b=this;b.disabled=true;post("/api/adm/gram/packages",{grams:$("#gu").value,price:$("#gp").value}).then(function(r){b.disabled=false;if(r.ok){toast("✅ Qo'shildi");grPk()}else toast("❌ "+grErr(r))})};
+ [].forEach.call(document.querySelectorAll("[data-gt]"),function(b){b.onclick=function(){post("/api/adm/gram/packages/"+b.dataset.gt+"/update",{active:b.dataset.a!=="1"}).then(function(){grPk()})}});
+ [].forEach.call(document.querySelectorAll("[data-gx]"),function(b){b.onclick=function(){ask("Paket o'chirilsinmi? Buyurtmalar tarixi saqlanadi.",function(){post("/api/adm/gram/packages/"+b.dataset.gx+"/delete").then(function(r){toast(r.ok?"🗑 O'chirildi":"❌ "+grErr(r));grPk()})})}});
+ [].forEach.call(document.querySelectorAll("[data-ge]"),function(b){b.onclick=function(){var r=GR.pk.filter(function(x){return x.id==b.dataset.ge})[0];if(!r)return;
+  modal("Paket #"+r.id,[{k:"grams",l:"Gram miqdori",v:r.grams,m:"decimal"},{k:"price",l:"Narx (so'm)",v:r.price,m:"numeric"},{k:"sort",l:"Tartib raqami (kichigi birinchi)",v:r.sort,m:"numeric"}],"Saqlash",
+   function(v){return post("/api/adm/gram/packages/"+r.id+"/update",v).then(function(x){if(x.ok){toast("✅ Saqlandi");grPk();return false}toast("❌ "+grErr(x));return true})})}})})}
+function grSet(){api("/api/adm/gram/settings").then(function(d){
+ if(d.error==="auth")return authFail();var en=d.enabled;
+ $("#gv").innerHTML='<div class="card"><div class="sw"><div><div class="nm">Gram sotuvi</div><div class="sub">O\'chiq bo\'lsa buyurtma qabul qilinmaydi</div></div><button class="btn s '+(en?"g":"e")+'" id="ge">'+(en?"ON":"OFF")+'</button></div></div>'+
+ '<div class="card"><div class="nm">Qanday ishlaydi</div><div class="sub" style="line-height:1.6;margin-top:6px">Foydalanuvchi paket tanlab, Gram hamyon manzili yoki Telegram @username kiritadi. Narx uning so\'mlik hisobidan yechiladi. Buyurtma sizga to\'liq manzil va profil bilan keladi. Gram\'ni yuborib «Tasdiqlash» bosasiz; «Rad etish» pulni qaytaradi.</div></div>'+
+ '<div class="card"><div class="nm">Narxlar</div><div class="sub">Paketlar va narxlar «Paketlar» bo\'limida boshqariladi. Har bir paket uchun so\'mda narx kiriting.</div></div>';
+ $("#ge").onclick=function(){en=!en;this.className="btn s "+(en?"g":"e");this.textContent=en?"ON":"OFF";post("/api/adm/gram/settings",{enabled:en}).then(function(){toast(en?"✅ Yoqildi":"⏸ To'xtatildi")})};
+})}
 
 /* ===================== PUBG UC ===================== */
 var UC={sub:"stats",ofil:"pending",oq:"",pk:[]};

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Gram olish</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  /* ------------------------------------------------------------
+     Gram (TON) do'koni: tungi ko'k fon, yumshoq neon, tanga motivi.
+     Asosiy urg'u — qabul qiluvchi manzil va paketlar.
+     ------------------------------------------------------------ */
+  :root {
+    --bg: #070b14;
+    --bg2: #0b1120;
+    --panel: #0e1626;
+    --raise: #152136;
+    --line: rgba(122, 170, 255, .14);
+    --line2: rgba(122, 170, 255, .26);
+    --text: #eaf1ff;
+    --mute: #8291ad;
+    --a: #3aa0ff;
+    --a2: #7c5cff;
+    --coin: #f5c451;
+    --coin2: #b57b12;
+    --ok: #3ddc97;
+    --bad: #ff6b6b;
+    --warn: #f5c451;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    color-scheme: dark;
+  }
+  body.tg-light {
+    --bg: #f2f6ff; --bg2: #e8efff; --panel: #ffffff; --raise: #eaf1ff;
+    --line: rgba(20, 60, 130, .12); --line2: rgba(20, 60, 130, .24);
+    --text: #101a2e; --mute: #5d6b86; --a: #1f7ae0; --a2: #6247d6;
+    --coin: #b57b12; --coin2: #8a5a00; --ok: #1f9d63; --bad: #d64545; --warn: #a06f00;
+    color-scheme: light;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { -webkit-text-size-adjust:100%; }
+  body {
+    background:
+      radial-gradient(900px 520px at 18% -12%, rgba(58,160,255,.20), transparent 62%),
+      radial-gradient(700px 460px at 105% 8%, rgba(124,92,255,.18), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    font-feature-settings:"tnum" 1; -webkit-font-smoothing:antialiased;
+    min-height:100vh; padding-bottom:calc(116px + var(--safe-b));
+  }
+  body.locked { overflow:hidden; }
+  button { font:inherit; color:inherit; border:none; background:none; cursor:pointer; }
+  button:focus-visible, input:focus-visible { outline:2px solid var(--a); outline-offset:2px; }
+  .app { max-width:520px; margin:0 auto; padding:0 16px; }
+
+  /* ---------- sarlavha ---------- */
+  .top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:18px 0 8px; }
+  .brand { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; letter-spacing:.16em;
+           text-transform:uppercase; color:var(--mute); margin-bottom:8px; }
+  .logo { width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:900;
+          color:#231500; background:linear-gradient(135deg, var(--coin), #ffe9a8 55%, var(--coin2));
+          box-shadow:0 0 18px rgba(245,196,81,.35); }
+  h1 { font-size:29px; font-weight:900; letter-spacing:-.03em; line-height:1; }
+  h1 em { font-style:normal; background:linear-gradient(100deg, var(--a), var(--a2));
+          -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sub { font-size:13.5px; color:var(--mute); margin-top:6px; }
+  .wallet { display:flex; align-items:center; gap:8px; padding:7px 7px 7px 13px; border-radius:999px;
+            background:var(--panel); border:1px solid var(--line); font-weight:750; font-size:13.5px; flex:none; margin-top:2px; }
+  .wallet:active { transform:scale(.96); }
+  .wallet .plus { width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+                  background:linear-gradient(135deg, var(--a), var(--a2)); color:#fff; font-size:17px; font-weight:800; line-height:1; }
+
+  /* ---------- bo'limlar ---------- */
+  section { margin-top:20px; }
+  .sec-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  h2 { font-size:15px; font-weight:800; letter-spacing:-.01em; }
+  .muted { color:var(--mute); font-size:12.5px; }
+
+  /* ---------- qabul qiluvchi ---------- */
+  .card { background:linear-gradient(180deg, rgba(255,255,255,.03), transparent 60%), var(--panel);
+          border:1px solid var(--line); border-radius:20px; padding:14px; }
+  .inputbox { display:flex; align-items:center; gap:6px; background:var(--raise); border:1.5px solid var(--line);
+              border-radius:15px; padding:4px 6px 4px 14px; transition:border-color .15s; }
+  .inputbox:focus-within { border-color:var(--a); }
+  .inputbox.bad { border-color:var(--bad); }
+  .inputbox.ok { border-color:color-mix(in srgb, var(--ok) 65%, var(--line)); }
+  .inputbox input { flex:1; min-width:0; background:none; border:none; outline:none; color:var(--text);
+                    font:inherit; font-size:15.5px; font-weight:650; letter-spacing:.01em; padding:12px 0; }
+  .inputbox input::placeholder { color:var(--mute); font-weight:500; }
+  .chipbtn { padding:9px 13px; border-radius:11px; background:var(--panel); border:1px solid var(--line);
+             font-size:13px; font-weight:700; color:var(--text); flex:none; }
+  .chipbtn:active { transform:scale(.96); }
+  .kind { font-size:11.5px; font-weight:800; padding:4px 9px; border-radius:999px; color:var(--mute);
+          background:var(--raise); border:1px solid var(--line); white-space:nowrap; }
+  .kind.address { color:var(--ok); border-color:color-mix(in srgb, var(--ok) 40%, transparent); }
+  .kind.username { color:var(--a); border-color:color-mix(in srgb, var(--a) 40%, transparent); }
+  .hint { font-size:12.5px; color:var(--mute); margin:9px 2px 0; line-height:1.5; }
+  .recent { display:none; margin-top:10px; }
+  .recent button { max-width:100%; padding:8px 12px; border-radius:999px; border:1px dashed var(--line2);
+                   font-size:12.5px; color:var(--mute); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .recent button b { color:var(--text); margin-left:4px; }
+  .profile { display:flex; align-items:center; gap:8px; margin-top:11px; padding-top:11px; border-top:1px solid var(--line);
+             font-size:12.5px; color:var(--mute); }
+  .profile .dot { width:7px; height:7px; border-radius:50%; background:var(--ok); box-shadow:0 0 10px var(--ok); flex:none; }
+  .profile b { color:var(--text); }
+
+  /* ---------- paketlar ---------- */
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .pkg { position:relative; text-align:left; padding:15px 14px 13px; border-radius:18px; background:var(--panel);
+         border:1.5px solid var(--line); transition:border-color .15s, background .15s, transform .12s; overflow:hidden; }
+  .pkg::after { content:""; position:absolute; inset:auto -30% -60% auto; width:120px; height:120px; border-radius:50%;
+                background:radial-gradient(circle, rgba(58,160,255,.18), transparent 70%); opacity:0; transition:opacity .2s; }
+  .pkg:active { transform:scale(.975); }
+  .pkg[aria-pressed="true"] { border-color:var(--a); background:linear-gradient(180deg, rgba(58,160,255,.14), var(--panel)); }
+  .pkg[aria-pressed="true"]::after { opacity:1; }
+  .pkg .coin { width:26px; height:26px; display:block; margin-bottom:8px; filter:drop-shadow(0 4px 12px rgba(245,196,81,.22)); }
+  .pkg .amt { display:flex; align-items:baseline; gap:5px; }
+  .pkg .amt b { font-size:27px; font-weight:900; letter-spacing:-.035em; line-height:1; }
+  .pkg .amt span { font-size:11.5px; font-weight:850; color:var(--coin); letter-spacing:.08em; }
+  .pkg .cost { margin-top:11px; font-size:14.5px; font-weight:850; }
+  .pkg .cost small { font-size:11.5px; font-weight:600; color:var(--mute); margin-left:3px; }
+  .pkg .per { font-size:11.5px; color:var(--mute); margin-top:2px; }
+  .skel .pkg { height:132px; animation:pulse 1.3s ease-in-out infinite; border-style:dashed; }
+  @keyframes pulse { 50% { opacity:.5; } }
+  .empty { display:none; text-align:center; padding:30px 18px; color:var(--mute); font-size:14px; line-height:1.5; }
+
+  /* ---------- tarix ---------- */
+  .hist { display:flex; flex-direction:column; gap:8px; }
+  .h-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:15px; background:var(--panel); border:1px solid var(--line); }
+  .h-row .l { flex:1; min-width:0; }
+  .h-row .t { font-weight:800; font-size:14.5px; }
+  .h-row .m { font-size:12px; color:var(--mute); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pill { font-size:11.5px; font-weight:800; padding:4px 10px; border-radius:999px; flex:none; }
+  .pill.pending { background:color-mix(in srgb, var(--warn) 16%, transparent); color:var(--warn); }
+  .pill.done { background:color-mix(in srgb, var(--ok) 16%, transparent); color:var(--ok); }
+  .pill.rejected { background:color-mix(in srgb, var(--bad) 15%, transparent); color:var(--bad); }
+
+  /* ---------- ogohlantirish ---------- */
+  .gate { display:none; margin-top:14px; padding:14px 16px; border-radius:17px; font-size:13.5px; line-height:1.5;
+          background:color-mix(in srgb, var(--bad) 12%, var(--panel)); border:1px solid color-mix(in srgb, var(--bad) 38%, transparent); }
+  .gate button { margin-top:10px; width:100%; padding:12px; border-radius:12px; font-weight:800; background:var(--text); color:var(--bg); }
+
+  /* ---------- pastki panel ---------- */
+  .bar { position:fixed; left:0; right:0; bottom:0; z-index:20; padding:12px 16px calc(12px + var(--safe-b));
+         background:linear-gradient(transparent, var(--bg) 30%); }
+  .bar .in { max-width:520px; margin:0 auto; display:flex; align-items:center; gap:14px; padding:10px 12px;
+             border-radius:20px; background:color-mix(in srgb, var(--panel) 88%, transparent);
+             border:1px solid var(--line); backdrop-filter:blur(14px); }
+  .sum { flex:1; min-width:0; }
+  .sum .a { font-size:12px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sum .p { font-size:18px; font-weight:900; letter-spacing:-.02em; }
+  .go { flex:none; padding:14px 20px; border-radius:15px; font-weight:850; font-size:15.5px; color:#fff;
+        background:linear-gradient(135deg, var(--a), var(--a2)); transition:transform .12s, opacity .15s;
+        box-shadow:0 8px 22px rgba(58,160,255,.24); }
+  .go:active { transform:scale(.97); }
+  .go:disabled { opacity:.38; box-shadow:none; }
+  .go.topup { background:var(--text); color:var(--bg); box-shadow:none; }
+
+  /* ---------- tasdiqlash oynasi ---------- */
+  .shade { position:fixed; inset:0; z-index:40; background:rgba(2,5,12,.7); opacity:0; pointer-events:none; transition:opacity .22s; }
+  .shade.on { opacity:1; pointer-events:auto; }
+  .sheet { position:fixed; left:0; right:0; bottom:0; z-index:41; max-width:520px; margin:0 auto; background:var(--bg2);
+           border-radius:24px 24px 0 0; border:1px solid var(--line); border-bottom:none;
+           padding:10px 18px calc(20px + var(--safe-b)); transform:translateY(105%);
+           transition:transform .3s cubic-bezier(.2,.8,.2,1); max-height:92vh; overflow:auto; }
+  .sheet.on { transform:none; }
+  .grip { width:40px; height:4px; border-radius:2px; background:var(--line2); margin:0 auto 14px; }
+  .sheet h3 { font-size:20px; font-weight:900; letter-spacing:-.02em; margin-bottom:12px; }
+  .rows { margin:14px 0 4px; border-top:1px solid var(--line); }
+  .rows div { display:flex; justify-content:space-between; gap:14px; padding:11px 0; border-bottom:1px solid var(--line); font-size:14.5px; }
+  .rows span { color:var(--mute); flex:none; }
+  .rows b { font-weight:750; text-align:right; word-break:break-all; }
+  .rows .after b { color:var(--coin); }
+  .notice { margin-top:13px; padding:11px 13px; border-radius:13px; font-size:12.5px; line-height:1.5;
+            background:color-mix(in srgb, var(--a) 10%, var(--panel)); border:1px solid color-mix(in srgb, var(--a) 30%, transparent); color:var(--mute); }
+  .sheet .go { width:100%; margin-top:16px; }
+  .sheet .alt { width:100%; margin-top:8px; padding:13px; border-radius:14px; color:var(--mute); font-weight:700; }
+
+  /* ---------- muvaffaqiyat ---------- */
+  .done { display:none; text-align:center; padding:44px 8px 20px; }
+  .stamp { width:92px; height:92px; margin:0 auto 18px; border-radius:50%; display:grid; place-items:center;
+           border:3px solid var(--ok); color:var(--ok); animation:stamp .45s cubic-bezier(.2,1.4,.4,1); }
+  .stamp svg { width:46px; height:46px; }
+  @keyframes stamp { from { transform:scale(1.7) rotate(-14deg); opacity:0; } to { transform:none; opacity:1; } }
+  .done h2 { font-size:24px; font-weight:900; margin-bottom:6px; }
+  .done p { color:var(--mute); font-size:14px; line-height:1.55; max-width:36ch; margin:0 auto; }
+  .receipt { margin:20px auto 0; max-width:380px; text-align:left; background:var(--panel); border:1px solid var(--line);
+             border-radius:18px; padding:14px; }
+  .receipt .r { display:flex; justify-content:space-between; gap:12px; padding:8px 0; font-size:13.5px; border-bottom:1px solid var(--line); }
+  .receipt .r:last-child { border-bottom:none; }
+  .receipt .r span { color:var(--mute); }
+  .receipt .r b { text-align:right; word-break:break-all; }
+  .done .btns { display:flex; flex-direction:column; gap:8px; margin-top:22px; }
+  .done .btns .go { width:100%; }
+  .done .btns .alt { padding:13px; border-radius:14px; color:var(--mute); font-weight:700; }
+
+  .toast { position:fixed; left:50%; top:14px; z-index:60; transform:translate(-50%,-90px); max-width:92%; padding:11px 16px;
+           border-radius:13px; background:var(--panel); border:1px solid var(--line); font-size:13.5px; font-weight:650;
+           transition:transform .25s; box-shadow:0 8px 28px rgba(0,0,0,.35); }
+  .toast.on { transform:translate(-50%,0); }
+
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <div>
+      <div class="brand"><span class="logo">G</span> TON · GRAM</div>
+      <h1>Gram <em>olish</em></h1>
+      <div class="sub">Hamyon manzili yoki Telegram profilingizga</div>
+    </div>
+    <button class="wallet" id="wallet" type="button" aria-label="Hisobni to'ldirish">
+      <span id="bal">…</span><span class="plus" aria-hidden="true">+</span>
+    </button>
+  </div>
+
+  <div class="gate" id="gate"></div>
+
+  <div id="main">
+    <section>
+      <div class="card">
+        <div class="sec-head"><h2>Qabul qiluvchi</h2><span class="kind" id="kind">—</span></div>
+        <div class="inputbox" id="wbox">
+          <input id="walletInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+                 maxlength="80" placeholder="UQ... yoki @username" aria-label="Gram hamyon manzili yoki Telegram username">
+          <button class="chipbtn" id="paste" type="button">Qo'yish</button>
+        </div>
+        <div class="hint">Gram hamyon manzili (EQ/UQ... yoki 0:...) yoki Telegram <b>@username</b>. Admin to'liq manzilni va profilingizni ko'radi.</div>
+        <div class="recent" id="recent"></div>
+        <div class="profile" id="profile"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head"><h2>Gram paketi</h2><span class="muted" id="rate"></span></div>
+      <div class="grid skel" id="packages">
+        <div class="pkg"></div><div class="pkg"></div><div class="pkg"></div><div class="pkg"></div>
+      </div>
+      <div class="empty" id="nopk">Hozircha paketlar yo'q. Admin tez orada qo'shadi.</div>
+    </section>
+
+    <section id="histsec" style="display:none">
+      <div class="sec-head"><h2>Oxirgi buyurtmalar</h2><span class="muted" id="histcount"></span></div>
+      <div class="hist" id="hist"></div>
+    </section>
+  </div>
+
+  <div class="done" id="done">
+    <div class="stamp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>Buyurtma qabul qilindi</h2>
+    <p id="donetext"></p>
+    <div class="receipt" id="receipt"></div>
+    <div class="btns">
+      <button class="go" id="again" type="button">Yana Gram olish</button>
+      <button class="alt" id="close" type="button">Botga qaytish</button>
+    </div>
+  </div>
+</div>
+
+<div class="bar" id="bar">
+  <div class="in">
+    <div class="sum"><div class="a" id="sa">Paket tanlang</div><div class="p" id="sp">—</div></div>
+    <button class="go" id="go" type="button" disabled>Sotib olish</button>
+  </div>
+</div>
+
+<div class="shade" id="shade"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Buyurtmani tasdiqlash">
+  <div class="grip"></div>
+  <h3>Buyurtmani tasdiqlang</h3>
+  <div class="rows" id="srows"></div>
+  <div class="notice">Gram admin tomonidan qo'lda yuboriladi. Manzil yoki @username xato bo'lsa, yuborilgan Gram qaytarilmaydi.</div>
+  <button class="go" id="confirm" type="button">To'lash</button>
+  <button class="alt" id="cancel" type="button">Orqaga</button>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  "use strict";
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    try { tg.expand(); tg.ready(); } catch (e) {}
+    if (tg.colorScheme === "light") document.body.classList.add("tg-light");
+    try {
+      var c = tg.colorScheme === "light" ? "#f2f6ff" : "#070b14";
+      tg.setHeaderColor(c); tg.setBackgroundColor(c); tg.setBottomBarColor && tg.setBottomBarColor(c);
+    } catch (e) {}
+  }
+  var headers = { "X-Telegram-Init-Data": (tg && tg.initData) || "", "Content-Type": "application/json" };
+  var $ = function (id) { return document.getElementById(id); };
+  var S = { info: null, pkg: null, wallet: "", busy: false };
+
+  var ERR = {
+    subscribe: "Avval kanalga obuna bo'ling",
+    disabled: "Gram sotuvi vaqtincha to'xtatilgan",
+    no_package: "Bu paket sotuvda yo'q. Sahifani yangilang",
+    bad_wallet: "Manzil noto'g'ri. TON hamyon (EQ/UQ...) yoki @username kiriting",
+    duplicate: "Bu buyurtma hozirgina yuborilgan",
+    insufficient_sum: "Hisobingizda mablag' yetarli emas",
+    auth: "Mini-appni botdagi tugma orqali oching",
+    network: "Internet bilan aloqa yo'q",
+    server: "Serverda xatolik. Keyinroq urinib ko'ring",
+    bad_request: "So'rov noto'g'ri"
+  };
+  var STATUS = { pending: "Kutilmoqda", processing: "Kutilmoqda", done: "Yuborildi", rejected: "Bekor qilindi" };
+
+  /* ---------- yordamchilar ---------- */
+  function money(n) { return Math.round(Number(n) || 0).toLocaleString("ru-RU"); }
+  function grams(n) {
+    n = Number(n) || 0;
+    if (Math.abs(n - Math.round(n)) < 1e-9) return String(Math.round(n));
+    return n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+  }
+  function api(path, body) {
+    var o = { headers: headers, cache: "no-store" };
+    if (body !== undefined) { o.method = "POST"; o.body = JSON.stringify(body); }
+    return fetch(path, o)
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: "server" }; }).then(function (d) { if (r.status === 401) d.error = "auth"; return d; }); })
+      .catch(function () { return { ok: false, error: "network" }; });
+  }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function haptic(k) { try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(k); } catch (e) {} }
+  function tick() { try { tg && tg.HapticFeedback && tg.HapticFeedback.selectionChanged(); } catch (e) {} }
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.classList.add("on");
+    clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove("on"); }, 3200);
+  }
+  function coinSvg() {
+    var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("viewBox", "0 0 32 32"); s.setAttribute("class", "coin"); s.setAttribute("aria-hidden", "true");
+    s.innerHTML = '<defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset=".55" stop-color="#f5c451"/><stop offset="1" stop-color="#b57b12"/></linearGradient></defs><circle cx="16" cy="16" r="15" fill="url(#gg)"/><circle cx="16" cy="16" r="11.4" fill="none" stroke="rgba(90,52,0,.45)" stroke-width="1.4"/><path d="M20.2 11.3a5.8 5.8 0 1 0 0 9.4" fill="none" stroke="#6b4200" stroke-width="2.4" stroke-linecap="round"/><path d="M15.2 13.4h5.2M15.2 18.6h5.2" stroke="#6b4200" stroke-width="2" stroke-linecap="round"/>';
+    return s;
+  }
+
+  /* ---------- manzilni tekshirish ---------- */
+  function cleanWallet(raw) {
+    var s = String(raw || "").trim();
+    var low = s.toLowerCase();
+    ["https://t.me/", "http://t.me/", "t.me/", "telegram.me/"].forEach(function (p) {
+      if (!s || low.indexOf(p) !== 0) return;
+      s = s.slice(p.length);
+    });
+    return s.trim().replace(/^@+/, "");
+  }
+  function walletKind(raw) {
+    var s = cleanWallet(raw);
+    if (!s) return "";
+    if (/^(?:0|-1):[0-9a-fA-F]{64}$/.test(s)) return "address";
+    if (/^(?:EQ|UQ|kQ|0Q)[A-Za-z0-9_-]{46}$/.test(s)) return "address";
+    if (/^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(s)) return "username";
+    return "";
+  }
+  function walletDisplay(raw) {
+    var k = walletKind(raw);
+    if (!k) return cleanWallet(raw);
+    return k === "username" ? "@" + cleanWallet(raw) : cleanWallet(raw);
+  }
+
+  /* ---------- paketlar ---------- */
+  function renderPackages() {
+    var box = $("packages"); box.className = "grid"; box.textContent = "";
+    var pk = (S.info && S.info.packages) || [];
+    $("nopk").style.display = pk.length ? "none" : "block";
+    var best = null;
+    pk.forEach(function (p) {
+      var per = p.grams > 0 ? p.price / p.grams : 0;
+      if (!best || per < best.per) best = { per: per, grams: p.grams };
+      var b = el("button", "pkg"); b.type = "button";
+      b.setAttribute("aria-pressed", S.pkg && S.pkg.id === p.id ? "true" : "false");
+      b.appendChild(coinSvg());
+      var amt = el("div", "amt"); amt.appendChild(el("b", "", grams(p.grams))); amt.appendChild(el("span", "", "GRAM"));
+      b.appendChild(amt);
+      var cost = el("div", "cost", money(p.price)); cost.appendChild(el("small", "", "so'm")); b.appendChild(cost);
+      b.appendChild(el("div", "per", money(per) + " so'm / Gram"));
+      b.onclick = function () { S.pkg = p; tick(); renderPackages(); refresh(); };
+      box.appendChild(b);
+    });
+    $("rate").textContent = best ? "Eng yaxshi: " + money(best.per) + " so'm / Gram" : "";
+  }
+
+  /* ---------- holat ---------- */
+  function refresh() {
+    var i = S.info, go = $("go");
+    if (!i) return;
+    $("bal").textContent = money(i.balance_sum) + " so'm";
+    var p = S.pkg, kind = walletKind(S.wallet);
+    $("kind").className = "kind" + (kind ? " " + kind : "");
+    $("kind").textContent = kind === "address" ? "TON hamyon" : (kind === "username" ? "Telegram profil" : "—");
+    $("wbox").className = "inputbox" + (S.wallet ? (kind ? " ok" : " bad") : "");
+    $("sa").textContent = p ? grams(p.grams) + " Gram" : "Paket tanlang";
+    $("sp").textContent = p ? money(p.price) + " so'm" : "—";
+    go.className = "go"; go.disabled = false;
+    if (!i.enabled || i.need_sub) { go.textContent = i.need_sub ? "Obuna kerak" : "To'xtatilgan"; go.disabled = true; return; }
+    if (!p) { go.textContent = "Paket tanlang"; go.disabled = true; return; }
+    if (i.balance_sum + 1e-9 < p.price) { go.textContent = "Hisobni to'ldirish"; go.className = "go topup"; return; }
+    if (!kind) { go.textContent = "Manzil kiriting"; go.disabled = true; return; }
+    go.textContent = "Sotib olish";
+  }
+
+  /* ---------- tasdiqlash ---------- */
+  function openSheet() {
+    var p = S.pkg, i = S.info;
+    var rows = $("srows"); rows.textContent = "";
+    var kind = walletKind(S.wallet);
+    [["Qabul qiluvchi", walletDisplay(S.wallet)],
+     ["Turi", kind === "username" ? "Telegram profil" : "TON Gram hamyoni"],
+     ["Paket", grams(p.grams) + " Gram"],
+     ["Narxi", money(p.price) + " so'm"]].forEach(function (r) {
+      var d = el("div"); d.appendChild(el("span", "", r[0])); d.appendChild(el("b", "", r[1])); rows.appendChild(d);
+    });
+    var after = el("div", "after"); after.appendChild(el("span", "", "Hisobda qoladi"));
+    after.appendChild(el("b", "", money(i.balance_sum - p.price) + " so'm")); rows.appendChild(after);
+    $("confirm").disabled = false;
+    $("confirm").textContent = "To'lash · " + money(p.price) + " so'm";
+    $("shade").classList.add("on"); $("sheet").classList.add("on"); document.body.classList.add("locked");
+  }
+  function closeSheet() { $("shade").classList.remove("on"); $("sheet").classList.remove("on"); document.body.classList.remove("locked"); }
+  $("shade").onclick = $("cancel").onclick = closeSheet;
+
+  $("go").onclick = function () {
+    if (!S.pkg || S.busy) return;
+    if (S.info.balance_sum + 1e-9 < S.pkg.price) { location.href = "/app?tab=topup"; return; }
+    openSheet();
+  };
+  $("wallet").onclick = function () { location.href = "/app?tab=topup"; };
+
+  $("confirm").onclick = function () {
+    if (S.busy) return; S.busy = true;
+    var btn = this, label = btn.textContent; btn.disabled = true; btn.textContent = "Yuborilmoqda…";
+    api("/api/gram/buy", { package_id: S.pkg.id, wallet: S.wallet }).then(function (r) {
+      S.busy = false; btn.textContent = label;
+      if (!r.ok) {
+        btn.disabled = false; haptic("error"); closeSheet();
+        if (typeof r.balance_sum === "number") S.info.balance_sum = r.balance_sum;
+        toast(ERR[r.error] || "Xatolik: " + (r.error || "noma'lum"));
+        if (r.error === "no_package" || r.error === "disabled") load();
+        refresh(); return;
+      }
+      haptic("success"); closeSheet(); S.info.balance_sum = r.balance_sum; showDone(r);
+    });
+  };
+
+  /* ---------- muvaffaqiyat ---------- */
+  function showDone(r) {
+    $("main").style.display = "none"; $("bar").style.display = "none"; $("done").style.display = "block";
+    $("donetext").textContent = "Buyurtma №" + r.order_id + " qabul qilindi. Admin Gram'ni yuborgach, bot sizga xabar yozadi.";
+    var box = $("receipt"); box.textContent = "";
+    [["Buyurtma", "#" + r.order_id], ["Paket", grams(r.grams) + " Gram"],
+     ["Qabul qiluvchi", r.wallet], ["Turi", r.wallet_kind === "username" ? "Telegram profil" : "TON hamyon"],
+     ["To'landi", money(r.price) + " so'm"]].forEach(function (x) {
+      var d = el("div", "r"); d.appendChild(el("span", "", x[0])); d.appendChild(el("b", "", x[1])); box.appendChild(d);
+    });
+    $("bal").textContent = money(r.balance_sum) + " so'm";
+    window.scrollTo(0, 0);
+  }
+  $("again").onclick = function () {
+    $("done").style.display = "none"; $("main").style.display = "block"; $("bar").style.display = "block";
+    S.pkg = null; load();
+  };
+  $("close").onclick = function () { if (tg && tg.close) tg.close(); else history.back(); };
+
+  /* ---------- maydon ---------- */
+  $("walletInput").oninput = function () {
+    S.wallet = this.value.trim();
+    refresh();
+  };
+  $("paste").onclick = function () {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (t) {
+        $("walletInput").value = String(t || "").trim().slice(0, 80);
+        S.wallet = $("walletInput").value; refresh();
+      }).catch(function () { $("walletInput").focus(); toast("Qo'yish uchun maydonni bosib ushlab turing"); });
+    } else { $("walletInput").focus(); toast("Qo'yish uchun maydonni bosib ushlab turing"); }
+  };
+
+  /* ---------- tarix ---------- */
+  function renderHist() {
+    var h = (S.info && S.info.history) || [];
+    $("histsec").style.display = h.length ? "block" : "none";
+    $("histcount").textContent = h.length ? h.length + " ta" : "";
+    var box = $("hist"); box.textContent = "";
+    h.forEach(function (o) {
+      var row = el("div", "h-row"), l = el("div", "l");
+      l.appendChild(el("div", "t", grams(o.grams) + " Gram · " + money(o.price) + " so'm"));
+      l.appendChild(el("div", "m", (o.wallet_kind === "username" ? "Profil: " : "Hamyon: ") + o.wallet + " · №" + o.order_id));
+      var cls = o.status === "done" ? "done" : (o.status === "rejected" ? "rejected" : "pending");
+      row.appendChild(l); row.appendChild(el("span", "pill " + cls, STATUS[o.status] || o.status));
+      box.appendChild(row);
+    });
+  }
+  function renderRecent() {
+    var r = $("recent"), last = S.info && S.info.last_wallet;
+    r.textContent = "";
+    if (last && !S.wallet) {
+      var b = el("button", "", "Oxirgi manzil:"); b.type = "button"; b.appendChild(el("b", "", last));
+      b.onclick = function () {
+        $("walletInput").value = last; S.wallet = last; r.style.display = "none"; refresh();
+      };
+      r.appendChild(b); r.style.display = "block";
+    } else r.style.display = "none";
+  }
+  function renderProfile() {
+    var p = $("profile"), uname = S.info && S.info.username;
+    p.textContent = "";
+    p.appendChild(el("span", "dot"));
+    if (uname) {
+      p.appendChild(document.createTextNode("Sizning profilingiz: "));
+      p.appendChild(el("b", "", "@" + uname));
+      p.appendChild(document.createTextNode(" — buyurtmada adminga ko'rinadi"));
+    } else {
+      p.appendChild(document.createTextNode("Profilingizda @username yo'q. Buyurtma Telegram ID orqali bog'lanadi."));
+    }
+  }
+
+  /* ---------- yuklash ---------- */
+  function load() {
+    return api("/api/gram/info").then(function (r) {
+      if (!r.ok) {
+        $("packages").className = "grid"; $("packages").textContent = "";
+        var g = $("gate"); g.style.display = "block"; g.textContent = ERR[r.error] || "Yuklab bo'lmadi. Keyinroq urinib ko'ring.";
+        return;
+      }
+      S.info = r;
+      if (S.pkg) S.pkg = r.packages.filter(function (p) { return p.id === S.pkg.id; })[0] || null;
+      var g2 = $("gate"); g2.textContent = ""; g2.style.display = "none";
+      if (r.need_sub) {
+        g2.style.display = "block";
+        g2.appendChild(document.createTextNode("Gram olish uchun avval @" + r.channel + " kanaliga obuna bo'ling."));
+        var jb = el("button", "", "Kanalga o'tish"); jb.type = "button";
+        jb.onclick = function () { var u = "https://t.me/" + r.channel; if (tg && tg.openTelegramLink) tg.openTelegramLink(u); else location.href = u; };
+        g2.appendChild(jb);
+      } else if (!r.enabled) {
+        g2.style.display = "block"; g2.textContent = "Gram sotuvi vaqtincha to'xtatilgan. Birozdan keyin qaytib keling.";
+      }
+      renderPackages(); renderHist(); renderRecent(); renderProfile(); refresh();
+    });
+  }
+  load();
+})();
+</script>
+</body>
+</html>
